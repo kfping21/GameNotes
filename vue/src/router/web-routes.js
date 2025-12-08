@@ -1,0 +1,75 @@
+import { session } from "@/utils/utils";
+export default [
+    {
+        path: "yonghu/add",
+        name: "IndexyonghuAdd",
+        component: () => import("@/views/yonghu/add-web.vue"),
+        meta: { title: "用户添加" },
+    },
+    {
+        path: "shoucang/add",
+        name: "IndexshoucangAdd",
+        component: () => import("@/views/shoucang/add-web.vue"),
+        meta: { title: "收藏添加", authLogin: true, msg: true },
+    },
+    {
+        path: "dianzan/add",
+        name: "IndexdianzanAdd",
+        component: () => import("@/views/dianzan/add-web.vue"),
+        meta: { title: "点赞添加", authLogin: true, msg: true },
+    },
+    {
+        path: "biji",
+        name: "IndexbijiList",
+        component: () => import("@/views/biji/index.vue"),
+        meta: { title: "笔记列表" },
+    },
+    {
+        path: "biji/detail",
+        name: "IndexbijiDetail",
+        props: (route) => ({ id: route.query.id }),
+        component: () => import("@/views/biji/detail-web.vue"),
+        meta: { title: "笔记详情" },
+    },
+    {
+        path: "youxi/detail",
+        name: "IndexyouxiDetail",
+        props: (route) => ({ id: route.query.id }),
+        component: () => import("@/views/youxi/detail-web.vue"),
+        meta: { title: "游戏详情" },
+    },
+    {
+        path: "zhongcao/add",
+        name: "IndexzhongcaoAdd",
+        props: (route) => ({ id: route.query.id }),
+        component: () => import("@/views/zhongcao/add-web.vue"),
+        meta: { title: "种草添加" },
+    },
+    {
+        path: "pinglun/add",
+        name: "IndexpinglunAdd",
+        component: () => import("@/views/pinglun/add-web.vue"),
+        meta: { title: "评论添加", authLogin: true, msg: true },
+    },
+    {
+        path: "pinglunhuifu/add",
+        name: "IndexpinglunhuifuAdd",
+        props: (route) => ({ id: route.query.id }),
+        component: () => import("@/views/pinglunhuifu/add-web.vue"),
+        meta: { title: "评论回复添加", authLogin: true, msg: true },
+    },
+    {
+        path: "guanzhu/add",
+        name: "IndexguanzhuAdd",
+        props: (route) => ({ id: route.query.id }),
+        component: () => import("@/views/guanzhu/add-web.vue"),
+        meta: { title: "关注添加", authLogin: true, msg: true },
+    },
+    {
+        path: "siliao/detail",
+        name: "IndexsiliaoDetail",
+        props: (route) => ({ id: route.query.id }),
+        component: () => import("@/views/siliao/detail-web.vue"),
+        meta: { title: "私聊详情", authLogin: true, msg: true },
+    },
+];

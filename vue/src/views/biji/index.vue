@@ -11,9 +11,12 @@
                                     <table class="jd-search">
                                         <tbody>
                                             <tr>
-                                                <td class="label">关键字</td>
+                                                <td class="label">关键词</td>
                                                 <td>
-                                                    <el-input type="text" name="keyword" v-model="search.keyword" placeholder="输入关键字"></el-input>
+                                                    <div style="display: flex; gap: 10px;">
+                                                        <el-input type="text" name="keyword" v-model="search.keyword" placeholder="请输入标题或内容关键词" style="width: 300px;" clearable @clear="searchSubmit" @keyup.enter="searchSubmit"></el-input>
+                                                        <el-button type="success" @click="searchSubmit">搜索</el-button>
+                                                    </div>
                                                 </td>
                                             </tr>
 
@@ -22,42 +25,32 @@
                                                 <td>
                                                     <p class="search-radio">
                                                         <a href="javascript:;" @click="selectRadio('guanlianyouxi', '')" :class="{ active: !search.guanlianyouxi }">全部</a>
-                                                        <a href="javascript:;" v-for="r in mapyouxi1" @click="selectRadio('guanlianyouxi', r.id)" :class="{ active: search.guanlianyouxi == r.id }" v-text="r.youximingcheng"> </a>
+                                                        <a href="javascript:;" v-for="r in mapyouxi1" :key="r.id" @click="selectRadio('guanlianyouxi', r.id)" :class="{ active: search.guanlianyouxi == r.id }" v-text="r.youximingcheng"> </a>
                                                     </p>
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td class="label">标签</td>
                                                 <td>
-                                                    <el-select v-model="search.biaoqian"><el-option label="请选择" value=""></el-option><e-select-option type="option" module="biaoqian" value="id" label="biaoqianmingcheng"></e-select-option></el-select>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td class="label">笔记名称</td>
-                                                <td>
-                                                    <el-input type="text" style="width: 150px" v-model="search.bijimingcheng" placeholder="请输入关键词"> </el-input>
+                                                    <el-select v-model="search.biaoqian" placeholder="请选择标签" clearable @change="searchSubmit">
+                                                        <el-option label="全部" value=""></el-option>
+                                                        <e-select-option type="option" module="biaoqian" value="id" label="biaoqianmingcheng"></e-select-option>
+                                                    </el-select>
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td class="label">排序</td>
                                                 <td>
-                                                    <div style="display: flex; justify-content: space-between">
+                                                    <div style="display: flex; justify-content: space-between; align-items: center;">
                                                         <p class="search-radio">
-                                                            <a href="javascript:;" @click="selectRadio('orderby', 'id')" :class="{ active: search.orderby == 'id' }">发布时间</a>
-                                                            <a href="javascript:;" @click="selectRadio('orderby', 'guanzhuliang')" :class="{ active: search.orderby == 'guanzhuliang' }">关注量</a>
-                                                            <a href="javascript:;" @click="selectRadio('orderby', 'zhongcaodu')" :class="{ active: search.orderby == 'zhongcaodu' }">种草度</a>
+                                                            <a href="javascript:;" @click="selectRadio('orderby', 'id')" :class="{ active: search.orderby == 'id' }">最新发布</a>
+                                                            <a href="javascript:;" @click="selectRadio('orderby', 'zhongcaodu')" :class="{ active: search.orderby == 'zhongcaodu' }">热度</a>
                                                         </p>
                                                         <p class="search-radio">
                                                             <a href="javascript:;" @click="selectRadio('sort', 'desc')" :class="{ active: search.sort == 'desc' }">倒序</a>
                                                             <a href="javascript:;" @click="selectRadio('sort', 'asc')" :class="{ active: search.sort == 'asc' }">升序</a>
                                                         </p>
                                                     </div>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td></td>
-                                                <td>
-                                                    <el-button type="success" @click="searchSubmit">搜索</el-button>
                                                 </td>
                                             </tr>
                                         </tbody>

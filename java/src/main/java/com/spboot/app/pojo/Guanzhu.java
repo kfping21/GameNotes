@@ -3,13 +3,11 @@ package com.spboot.app.pojo;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.jntoo.db.DB;
 import java.io.Serializable;
-import java.util.*;
+import java.util.Date;
 
 /**
- * 关注 表 guanzhu.
+ * 关注（用户关注表 user_follow），保留类名 Guanzhu 以兼容原有调用
  */
 @TableName("guanzhu")
 public class Guanzhu implements Serializable {
@@ -19,20 +17,18 @@ public class Guanzhu implements Serializable {
     @TableId(type = IdType.AUTO)
     private Integer id;
 
-    // 笔记id.
-    private Integer bijiid;
-    // 笔记编号.
-    private String bijibianhao;
-    // 笔记名称.
-    private String bijimingcheng;
-    // 标签.
-    private String biaoqian;
-    // 关联游戏.
-    private Integer guanlianyouxi;
-    // 添加人.
-    private String tianjiaren;
-    // 关注人.
-    private String guanzhuren;
+    // 关注者（用户名或用户标识）
+    private String follower;
+
+    // 被关注者（用户名或用户标识）
+    private String followee;
+
+    // 状态：1=有效，0=取消（可选）
+    private Integer status;
+
+    private Date createdAt;
+
+    private Date updatedAt;
 
     public Integer getId() {
         return id;
@@ -42,59 +38,43 @@ public class Guanzhu implements Serializable {
         this.id = id;
     }
 
-    public Integer getBijiid() {
-        return bijiid;
+    public String getFollower() {
+        return follower;
     }
 
-    public void setBijiid(Integer bijiid) {
-        this.bijiid = bijiid == null ? 0 : bijiid;
+    public void setFollower(String follower) {
+        this.follower = follower == null ? "" : follower.trim();
     }
 
-    public String getBijibianhao() {
-        return bijibianhao;
+    public String getFollowee() {
+        return followee;
     }
 
-    public void setBijibianhao(String bijibianhao) {
-        this.bijibianhao = bijibianhao == null ? "" : bijibianhao.trim();
+    public void setFollowee(String followee) {
+        this.followee = followee == null ? "" : followee.trim();
     }
 
-    public String getBijimingcheng() {
-        return bijimingcheng;
+    public Integer getStatus() {
+        return status;
     }
 
-    public void setBijimingcheng(String bijimingcheng) {
-        this.bijimingcheng = bijimingcheng == null ? "" : bijimingcheng.trim();
+    public void setStatus(Integer status) {
+        this.status = status == null ? 1 : status;
     }
 
-    public String getBiaoqian() {
-        return biaoqian;
+    public Date getCreatedAt() {
+        return createdAt;
     }
 
-    public void setBiaoqian(String biaoqian) {
-        this.biaoqian = biaoqian == null ? "" : biaoqian.trim();
+    public void setCreatedAt(Date createdAt) {
+        this.createdAt = createdAt;
     }
 
-    public Integer getGuanlianyouxi() {
-        return guanlianyouxi;
+    public Date getUpdatedAt() {
+        return updatedAt;
     }
 
-    public void setGuanlianyouxi(Integer guanlianyouxi) {
-        this.guanlianyouxi = guanlianyouxi == null ? 0 : guanlianyouxi;
-    }
-
-    public String getTianjiaren() {
-        return tianjiaren;
-    }
-
-    public void setTianjiaren(String tianjiaren) {
-        this.tianjiaren = tianjiaren == null ? "" : tianjiaren.trim();
-    }
-
-    public String getGuanzhuren() {
-        return guanzhuren;
-    }
-
-    public void setGuanzhuren(String guanzhuren) {
-        this.guanzhuren = guanzhuren == null ? "" : guanzhuren.trim();
+    public void setUpdatedAt(Date updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

@@ -45,6 +45,9 @@ public class WebSocketSever {
     // concurrent包的线程安全Set,用来存放每个客户端对应的WebSocket对象。
     private static CopyOnWriteArraySet<WebSocketSever> webSocketSet = new CopyOnWriteArraySet<>();
 
+    // 新增：房间映射，roomId -> Set<userId>
+    private static ConcurrentHashMap<Integer, CopyOnWriteArraySet<String>> roomUsers = new ConcurrentHashMap<>();
+
     /**
      * 建立WebSocket连接
      *
@@ -75,7 +78,7 @@ public class WebSocketSever {
 
     /**
      * 发生错误
-     *e
+     *
      * @param throwable
      */
     @OnError
@@ -91,6 +94,10 @@ public class WebSocketSever {
         // session 池中删除对应的数据
         sessionPool.remove(this.userId);
         webSocketSet.remove(this);
+        // 离开所有房间
+        for (Map.Entry<Integer, CopyOnWriteArraySet<String>> entry : roomUsers.entrySet()) {
+            entry.getValue().remove(this.userId);
+        }
         log.info("连接断开,当前在线人数为：{}", webSocketSet.size());
     }
 
@@ -140,6 +147,28 @@ public class WebSocketSever {
         return Message.ok();
     }
 
+    // 新增：加入房间
+    public Message joinRoom(JSONObject jsonObject) {
+        Integer roomId = jsonObject.getInteger("roomId");
+        if (roomId != null) {
+            roomUsers.computeIfAbsent(roomId, k -> new CopyOnWriteArraySet<>()).add(this.userId);
+            log.info("用户 {} 加入房间 {}", this.userId, roomId);
+        }
+        return Message.ok();
+    }
+
+    // 新增：离开房间
+    public Message leaveRoom(JSONObject jsonObject) {
+        Integer roomId = jsonObject.getInteger("roomId");
+        if (roomId != null) {
+            CopyOnWriteArraySet<String> users = roomUsers.get(roomId);
+            if (users != null) {
+                users.remove(this.userId);
+                log.info("用户 {} 离开房间 {}", this.userId, roomId);
+            }
+        }
+        return Message.ok();
+    }
 
     public Message send(JSONObject jsonObject){
         Xiaoxi xiaoxi = new Xiaoxi();
@@ -175,9 +204,6 @@ public class WebSocketSever {
 
         return new Message("sessionList",result);
     }
-
-
-
 
     /**
      * 推送消息到指定用户
@@ -222,6 +248,21 @@ public class WebSocketSever {
                 webSocket.session.getBasicRemote().sendText(msg);
             } catch (IOException e) {
                 log.error("群发消息发生错误：" + e.getMessage(), e);
+            }
+        }
+    }
+
+    /**
+     * 推送消息到指定房间的所有用户
+     *
+     * @param roomId  房间ID
+     * @param message 发送的消息
+     */
+    public static void sendMessageByRoom(Integer roomId, Object message) {
+        CopyOnWriteArraySet<String> users = roomUsers.get(roomId);
+        if (users != null) {
+            for (String userId : users) {
+                sendMessageByUser(userId, message);
             }
         }
     }

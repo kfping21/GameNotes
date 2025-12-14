@@ -68,3 +68,4 @@ public class Tongzhi implements Serializable {
         this.issh = issh == null ? "" : issh.trim();
     }
 }
+

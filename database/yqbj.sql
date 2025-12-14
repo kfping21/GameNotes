@@ -435,4 +435,212 @@ INSERT INTO `zhongcao` VALUES (4, 3, '11262059857', '3D无缝大地图+新剧本
 INSERT INTO `zhongcao` VALUES (5, 2, '112620407227', '《三角洲行动》全面战场隐藏彩蛋全攻略', '1,2', 1, '002', '001', '2025-11-28 16:26:12');
 INSERT INTO `zhongcao` VALUES (6, 1, '112618419103', '新手必看！《怪物乐土》开局避坑指南', '1,4,6,7', 3, '001', '002', '2025-11-28 18:26:37');
 
+-- ------------------------------------------------------------
+-- Schema updates for new功能模块
+-- ------------------------------------------------------------
+
+-- 为多业务复用点赞/收藏/评论，补充业务标识
+ALTER TABLE `dianzan`
+    ADD COLUMN `biz_type` varchar(50) NOT NULL DEFAULT '' COMMENT '业务类型' AFTER `biaoti`,
+    ADD COLUMN `biz_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '业务主键' AFTER `biz_type`;
+
+ALTER TABLE `shoucang`
+    ADD COLUMN `biz_type` varchar(50) NOT NULL DEFAULT '' COMMENT '业务类型' AFTER `biaoti`,
+    ADD COLUMN `biz_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '业务主键' AFTER `biz_type`;
+
+ALTER TABLE `pinglun`
+    ADD COLUMN `biz_type` varchar(50) NOT NULL DEFAULT '' COMMENT '业务类型' AFTER `biaoti`,
+    ADD COLUMN `biz_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '业务主键' AFTER `biz_type`;
+
+ALTER TABLE `pinglunhuifu`
+    ADD COLUMN `biz_type` varchar(50) NOT NULL DEFAULT '' COMMENT '业务类型' AFTER `biaoti`,
+    ADD COLUMN `biz_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '业务主键' AFTER `biz_type`;
+
+-- 游戏表补充分类、发行日期、标签与简介
+ALTER TABLE `youxi`
+    ADD COLUMN `game_category_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '游戏分类ID' AFTER `guanlianbiji`,
+    ADD COLUMN `release_date` varchar(25) NOT NULL DEFAULT '' COMMENT '发行日期' AFTER `youxitupian`,
+    ADD COLUMN `tag_ids` text NOT NULL COMMENT '标签ID列表' AFTER `zhuangbeiku`,
+    ADD COLUMN `intro` longtext NULL COMMENT '简介' AFTER `xiangqing`;
+
+-- ------------------------------------------------------------
+-- 新增：游戏分类与内容关联
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS `game_category`;
+CREATE TABLE `game_category`  (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL DEFAULT '' COMMENT '分类名称',
+  `sort` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '排序',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '游戏分类' ROW_FORMAT = Dynamic;
+
+DROP TABLE IF EXISTS `game_tag_map`;
+CREATE TABLE `game_tag_map`  (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `game_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'youxi.id',
+  `tag_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'biaoqian.id',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `game_idx`(`game_id`) USING BTREE,
+  INDEX `tag_idx`(`tag_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '游戏标签关联' ROW_FORMAT = Dynamic;
+
+DROP TABLE IF EXISTS `game_equipment`;
+CREATE TABLE `game_equipment`  (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `game_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'youxi.id',
+  `name` varchar(255) NOT NULL DEFAULT '' COMMENT '装备名称',
+  `cover_url` varchar(255) NOT NULL DEFAULT '' COMMENT '封面',
+  `type` varchar(100) NOT NULL DEFAULT '' COMMENT '类型',
+  `stats_json` longtext NULL COMMENT '属性/数值（JSON）',
+  `intro` longtext NULL COMMENT '简介',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `game_idx`(`game_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '游戏装备库' ROW_FORMAT = Dynamic;
+
+DROP TABLE IF EXISTS `game_character`;
+CREATE TABLE `game_character`  (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `game_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'youxi.id',
+  `name` varchar(255) NOT NULL DEFAULT '' COMMENT '人物名称',
+  `avatar_url` varchar(255) NOT NULL DEFAULT '' COMMENT '头像',
+  `role` varchar(100) NOT NULL DEFAULT '' COMMENT '职业/定位',
+  `skills_json` longtext NULL COMMENT '技能/属性（JSON）',
+  `intro` longtext NULL COMMENT '简介',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `game_idx`(`game_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '游戏人物库' ROW_FORMAT = Dynamic;
+
+DROP TABLE IF EXISTS `game_note_map`;
+CREATE TABLE `game_note_map`  (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `game_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'youxi.id',
+  `note_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'biji.id',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `game_idx`(`game_id`) USING BTREE,
+  INDEX `note_idx`(`note_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '游戏-笔记关联' ROW_FORMAT = Dynamic;
+
+-- ------------------------------------------------------------
+-- 新增：话题与聊天室
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS `topic_main`;
+CREATE TABLE `topic_main`  (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) NOT NULL DEFAULT '' COMMENT '大话题标题',
+  `intro` longtext NULL COMMENT '简介',
+  `tag_ids` text NOT NULL COMMENT '标签ID列表',
+  `created_by` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建人(yonghu.id或admins)',
+  `status` varchar(20) NOT NULL DEFAULT 'active' COMMENT '状态',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '大话题' ROW_FORMAT = Dynamic;
+
+DROP TABLE IF EXISTS `topic_sub`;
+CREATE TABLE `topic_sub`  (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `main_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'topic_main.id',
+  `title` varchar(255) NOT NULL DEFAULT '' COMMENT '小话题标题',
+  `intro` longtext NULL COMMENT '简介',
+  `created_by` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建人(yonghu.id)',
+  `status` varchar(20) NOT NULL DEFAULT 'active' COMMENT '状态',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `main_idx`(`main_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '小话题' ROW_FORMAT = Dynamic;
+
+DROP TABLE IF EXISTS `topic_note_map`;
+CREATE TABLE `topic_note_map`  (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `topic_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'topic_main/topic_sub id',
+  `note_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'biji.id',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `topic_idx`(`topic_id`) USING BTREE,
+  INDEX `note_idx`(`note_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '话题-笔记关联' ROW_FORMAT = Dynamic;
+
+DROP TABLE IF EXISTS `topic_chat_room`;
+CREATE TABLE `topic_chat_room`  (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `topic_main_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '大话题ID',
+  `topic_sub_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '小话题ID',
+  `name` varchar(255) NOT NULL DEFAULT '' COMMENT '聊天室名称',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `main_idx`(`topic_main_id`) USING BTREE,
+  INDEX `sub_idx`(`topic_sub_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '话题聊天室' ROW_FORMAT = Dynamic;
+
+DROP TABLE IF EXISTS `topic_chat_message`;
+CREATE TABLE `topic_chat_message`  (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `room_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'topic_chat_room.id',
+  `sender_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '发送人yonghu.id',
+  `content` longtext NULL COMMENT '消息内容',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发送时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `room_idx`(`room_id`) USING BTREE,
+  INDEX `sender_idx`(`sender_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '话题聊天室消息' ROW_FORMAT = Dynamic;
+
+-- ------------------------------------------------------------
+-- 新增：AI 查询日志
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS `ai_query_log`;
+CREATE TABLE `ai_query_log`  (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'yonghu.id',
+  `query_text` longtext NULL COMMENT '用户需求描述',
+  `limit_count` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '请求条数',
+  `result_type` varchar(20) NOT NULL DEFAULT '' COMMENT 'note/topic等',
+  `result_ids` longtext NULL COMMENT '返回的ID列表(JSON)',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = 'AI推荐请求日志' ROW_FORMAT = Dynamic;
+
+-- ------------------------------------------------------------
+-- 新增：周边电商
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS `product_category`;
+CREATE TABLE `product_category`  (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL DEFAULT '' COMMENT '分类名称',
+  `parent_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '父级ID',
+  `sort` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '排序',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '周边分类' ROW_FORMAT = Dynamic;
+
+DROP TABLE IF EXISTS `product`;
+CREATE TABLE `product`  (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `game_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'youxi.id，可为空',
+  `category_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'product_category.id',
+  `name` varchar(255) NOT NULL DEFAULT '' COMMENT '商品名称',
+  `cover_url` varchar(255) NOT NULL DEFAULT '' COMMENT '封面',
+  `price` decimal(10,2) NOT NULL DEFAULT 0.00 COMMENT '价格',
+  `stock` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '库存',
+  `tags` varchar(255) NOT NULL DEFAULT '' COMMENT '标签',
+  `intro` longtext NULL COMMENT '简介',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `game_idx`(`game_id`) USING BTREE,
+  INDEX `category_idx`(`category_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '周边商品' ROW_FORMAT = Dynamic;
+
+DROP TABLE IF EXISTS `product_image`;
+CREATE TABLE `product_image`  (
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `product_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'product.id',
+  `url` varchar(255) NOT NULL DEFAULT '' COMMENT '图片地址',
+  `sort` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '排序',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `product_idx`(`product_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品图片' ROW_FORMAT = Dynamic;
+
 SET FOREIGN_KEY_CHECKS = 1;

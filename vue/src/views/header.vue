@@ -12,13 +12,8 @@
                 <li :class="{ current: isFullPathActive({ path: '/biji' }) }">
                     <router-link :to="{ path: '/biji' }" title="笔记信息"> 笔记信息 </router-link>
                 </li>
-
-
-                <li :class="{ current: isFullPathActive({ path: '/yonghu/add' }) }">
-                    <router-link :to="{ path: '/yonghu/add' }" title="用户注册"> 用户注册 </router-link>
-                </li>
-                <li :class="{ current: isFullPathActive('/login') }">
-                    <router-link :to="'/login'" title="后台管理"> 后台管理 </router-link>
+                <li :class="{ current: isFullPathActive({ path: '/topic' }) }">
+                    <router-link :to="{ path: '/topic' }" title="话题广场"> 话题广场 </router-link>
                 </li>
             </ul>
             <div class="right clearfix">
@@ -44,6 +39,43 @@
                     </div>
                 </template>
                 <template v-else>
+                    <div class="line"></div>
+                    <div class="link">
+                        <router-link to="/login">管理员登录</router-link>
+                    </div>
+                    <div class="line"></div>
+                    <div class="link">
+                        <a href="javascript:;" @click="showReg"> <i class="fa fa-user-plus"></i> 注册 </a>
+                        <div class="login-model" @click.stop :class="{ 'show-model': isShowReg }">
+                            <div class="login-box">
+                                <h3 class="login-title">用户注册</h3>
+                                <form action="javascript:;" @submit.prevent="onReg">
+                                    <div class="login-input input-username">
+                                        <input type="text" class="input" v-model="regForm.zhanghao" placeholder="输入账号" required />
+                                        <span class="input-title">账号：</span>
+                                    </div>
+                                    <div class="login-input input-password">
+                                        <input type="password" class="input" v-model="regForm.mima" placeholder="输入密码" required />
+                                        <span class="input-title">密码：</span>
+                                    </div>
+                                    <div class="login-input input-username">
+                                        <input type="text" class="input" v-model="regForm.mingcheng" placeholder="输入昵称" required />
+                                        <span class="input-title">昵称：</span>
+                                    </div>
+                                    <div class="login-input input-cx">
+                                        <select class="input" v-model="regForm.xingbie">
+                                            <option value="男">男</option>
+                                            <option value="女">女</option>
+                                        </select>
+                                        <span class="input-title">性别：</span>
+                                    </div>
+                                    <div class="login-btn">
+                                        <button class="input-btn-bottom" type="submit">注册</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                     <div class="line"></div>
                     <div class="link">
                         <a href="javascript:;" @click="showLogin"> <i class="fa fa-user-o"></i> {{ isShowLogin ? "关闭" : "登录" }} </a>
@@ -85,6 +117,7 @@
     import { useRouter, useRoute } from "vue-router";
     import { computed, ref, reactive, watch, onMounted, onBeforeUnmount } from "vue";
     import { logout, session, useEvent } from "@/utils";
+    import { canYonghuInsert } from "@/module";
     import config from "@/config";
     import DB from "@/utils/db";
     import { Search } from "@element-plus/icons-vue";
@@ -98,6 +131,7 @@
     import { ElMessage } from "element-plus";
 
     const isShowLogin = ref(false);
+    const isShowReg = ref(false);
 
     const loginBoxRef = ref(null);
     const captchaUrl = ref("");
@@ -111,6 +145,46 @@
         a: "a",
         /* 验证码段 */
     });
+
+    const regForm = reactive({
+        zhanghao: "",
+        mima: "",
+        mingcheng: "",
+        xingbie: "男",
+    });
+
+    const showReg = (e) => {
+        if (e) {
+            e.stopPropagation();
+            e.preventDefault();
+        }
+        isShowLogin.value = false;
+        if (!isShowReg.value) {
+            regForm.zhanghao = "";
+            regForm.mima = "";
+            regForm.mingcheng = "";
+            regForm.xingbie = "男";
+            domEvent.once(document, "click", () => {
+                isShowReg.value = false;
+            });
+        }
+        isShowReg.value = !isShowReg.value;
+    };
+
+    const onReg = async () => {
+        if (!regForm.zhanghao || !regForm.mima || !regForm.mingcheng) {
+            ElMessage.error("请填写完整信息");
+            return;
+        }
+        const res = await canYonghuInsert(regForm);
+        if (res.code === 0) {
+            ElMessage.success("注册成功，请登录");
+            isShowReg.value = false;
+            isShowLogin.value = true;
+        } else {
+            ElMessage.error(res.msg);
+        }
+    };
     const loadCaptcha = () => {
         captch().then((res) => {
             loginForm.captchToken = res.token;
@@ -134,6 +208,7 @@
     const showLogin = (e) => {
         e.stopPropagation();
         e.preventDefault();
+        isShowReg.value = false;
         if (!isShowLogin.value) {
             loginForm.username = "";
             loginForm.pwd = "";

@@ -7,6 +7,13 @@ export default [
         meta: { title: "用户添加" },
     },
     {
+        path: "yonghu/detail",
+        name: "IndexyonghuDetail",
+        props: (route) => ({ id: route.query.id }),
+        component: () => import("@/views/yonghu/detail-web.vue"),
+        meta: { title: "用户详情" },
+    },
+    {
         path: "shoucang/add",
         name: "IndexshoucangAdd",
         component: () => import("@/views/shoucang/add-web.vue"),
@@ -71,5 +78,18 @@ export default [
         props: (route) => ({ id: route.query.id }),
         component: () => import("@/views/siliao/detail-web.vue"),
         meta: { title: "私聊详情", authLogin: true, msg: true },
+    },
+    {
+        path: "topic",
+        name: "IndexTopicList",
+        component: () => import("@/views/topic/index.vue"),
+        meta: { title: "话题广场" },
+    },
+    {
+        path: "topic/detail",
+        name: "IndexTopicDetail",
+        props: (route) => ({ id: route.query.id }),
+        component: () => import("@/views/topic/detail.vue"),
+        meta: { title: "话题详情" },
     },
 ];

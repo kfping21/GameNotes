@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="$PROJECT_DIR$/src/main/java/com/spboot/app/mapper/UserFollowMapper.java">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/src/main/java/com/spboot/app/mapper/UserFollowMapper.java" />
+              <option name="originalContent" value="&#10;&#10;&#10;" />
+              <option name="updatedContent" value="package com.spboot.app.mapper;&#10;&#10;import com.baomidou.mybatisplus.core.mapper.BaseMapper;&#10;import com.spboot.app.pojo.UserFollow;&#10;import org.apache.ibatis.annotations.Mapper;&#10;&#10;@Mapper&#10;public interface UserFollowMapper extends BaseMapper&lt;UserFollow&gt; {&#10;    // 已移除：UserFollowMapper 不再使用，相关逻辑合并到 GuanzhuMapper/Guanzhu 中。&#10;}" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/src/main/java/com/spboot/app/pojo/UserFollow.java">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/src/main/java/com/spboot/app/pojo/UserFollow.java" />
+              <option name="originalContent" value="&#10;&#10;" />
+              <option name="updatedContent" value="// 已移除：UserFollow 实体文件，项目使用 Guanzhu 实体映射 user_follow 表（按要求不新增 UserFollow* 文件）" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/src/main/java/com/spboot/app/service/UserFollowService.java">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/src/main/java/com/spboot/app/service/UserFollowService.java" />
+              <option name="originalContent" value="&#10;&#10;" />
+              <option name="updatedContent" value="package com.spboot.app.service;&#10;&#10;// 已移除：UserFollowService 已合并回 GuanzhuService，项目中不再使用此类。&#10;public class UserFollowService {&#10;&#10;}" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

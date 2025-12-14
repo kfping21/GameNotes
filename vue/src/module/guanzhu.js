@@ -8,142 +8,24 @@ import { ElMessageBox } from "element-plus";
 import router from "@/router";
 import event from "@/utils/event";
 
-import { canBijiFindById } from "./biji";
-
 /**
- * å“åº”å¼çš„å¯¹è±¡æ•°æ®
- * @return {EGuanzhu}
- */
-
-export const GuanzhuCreateForm = () => {
-    var route = unref(router.currentRoute);
-    const userStore = useUserStore();
-    const $session = userStore.session;
-    if (!route.query) {
-        route = useRoute();
-    }
-    const form = {
-        bijibianhao: "",
-        bijimingcheng: "",
-        biaoqian: "",
-        guanlianyouxi: "",
-        tianjiaren: $session.username,
-        guanzhuren: $session.username,
-    };
-
-    return form;
-};
-
-function exportForm(form, readMap) {
-    var autoText = ["bijiid", "bijibianhao", "bijimingcheng", "biaoqian", "guanlianyouxi", "tianjiaren"];
-    for (var txt of autoText) {
-        form[txt] = readMap[txt];
-    }
-}
-
-/**
- * å¼‚æ­¥æ¨¡å¼è·å–æ•°æ®
- * @param id
- * @param readMap
- * @return {Promise<EGuanzhuForm>}
- */
-export const canGuanzhuCreateForm = (id, readMap) => {
-    return new Promise(async (resolve, reject) => {
-        var form = GuanzhuCreateForm();
-        if (!readMap || !readMap.id) {
-            readMap = await canBijiFindById(id).catch(reject);
-        }
-        exportForm(form, readMap);
-        form.bijiid = readMap.id;
-        resolve({ form, readMap });
-    });
-};
-
-/**
- * å“åº”å¼è·å–å…³æ³¨ æ¨¡å—çš„è¡¨å•å­—æ®µæ•°æ®
- * @return {EGuanzhuForm}
- */
-export const useGuanzhuCreateForm = (id) => {
-    const form = GuanzhuCreateForm();
-    const formReactive = reactive(form);
-
-    const readMap = reactive({});
-    canBijiFindById(id).then(
-        (map) => {
-            exportForm(formReactive, map);
-            extend(readMap, map);
-            formReactive.bijiid = map.id;
-        },
-        (err) => {
-            ElMessageBox.alert(err.message);
-        }
-    );
-    return { form: formReactive, readMap };
-};
-
-export const canGuanzhuSelect = (filter, result) => {
-    http.post("/api/guanzhu/selectPages").then((res) => {
-        if (res.code == 0) {
-            extend(result, res.data);
-        } else {
-            ElMessageBox.alert(res.msg);
-        }
-    });
-};
-
-/**
- * è·å–åˆ†é¡µæ•°æ®
- * @param filter
- */
-export const useGuanzhuSelect = (filter) => {
-    const result = reactive({
-        lists: [],
-        total: {},
-    });
-    canGuanzhuSelect(filter, result);
-    return result;
-};
-
-/**
- * æ ¹æ®
- * @param id
- * @return {Promise<EGuanzhu>}
- */
-export const canGuanzhuFindById = (id) => {
-    return new Promise((resolve, reject) => {
-        // è¯»å–åå°æ•°æ®
-        http.get("/api/guanzhu/findById", { id }).then((res) => {
-            if (res.code == 0) {
-                resolve(res.data);
-            } else {
-                reject(new Error(res.msg));
-            }
-        }, reject);
-    });
-};
-
-/**
- * æ ¹æ®id è·å–ä¸€è¡Œæ•°æ®
- * @param id
- * @return {EGuanzhu}
- */
-export const useGuanzhuFindById = (id) => {
-    var form = reactive({});
-
-    canGuanzhuFindById(id).then((res) => {
-        extend(form, res);
-    });
-    return form;
-};
-
-/**
- * æ ¹æ®æ•°æ®,æ’å…¥åˆ°æ•°æ®åº“ä¸­
- * @param {EGuanzhu} data
- * @return {Promise<EResponseData<EGuanzhu>>}
+ * ¹Ø×¢ÓÃ»§
+ * @param {object|string} data °üº¬ followee µÄ¶ÔÏó »ò followee ÓÃ»§Ãû×Ö·û´®
+ * @return {Promise}
  */
 export const canGuanzhuInsert = (data) => {
+    let followee = "";
+    if (typeof data === "string") {
+        followee = data;
+    } else if (data && data.followee) {
+        followee = data.followee;
+    } else if (data && data.tianjiaren) {
+        // ¼æÈİ¾É´úÂë£¬Èç¹û´«ÁË tianjiaren£¬ÊÓÎª followee
+        followee = data.tianjiaren;
+    }
+    
     return new Promise((resolve, reject) => {
-        http.post("/api/guanzhu/insert", data)
+        http.post("/api/guanzhu/insert", { followee })
             .json()
             .then(
                 (res) => {
@@ -161,44 +43,27 @@ export const canGuanzhuInsert = (data) => {
 };
 
 /**
- * æ ¹æ®æ•°æ®æ›´æ–°æ•°æ®åº“
- * @param {EGuanzhu} data
- * @return {Promise<EResponseData<EGuanzhu>>}
+ * È¡Ïû¹Ø×¢
+ * @param {string|number[]|object} data Ä¿±êÓÃ»§Ãû »ò IDÁĞ±í »ò °üº¬ followee µÄ¶ÔÏó
+ * @return {Promise}
  */
-export const canGuanzhuUpdate = (data) => {
-    return new Promise((resolve, reject) => {
-        http.post("/api/guanzhu/update", data)
-            .json()
-            .then(
-                (res) => {
-                    resolve(res);
-                    if (res.code == 0) {
-                        event.emit("guanzhu_update", res.data);
-                        event.emit("guanzhu_change", res.data);
-                    }
-                },
-                (err) => {
-                    reject(err);
-                }
-            );
-    });
-};
-
-/**
- * æ ¹æ®id æˆ–è€…åˆ—è¡¨id
- * @param {number|number[]} id
- * @return {Promise<EResponseData<string>>}
- */
-export const canGuanzhuDelete = (id) => {
-    var res = [];
-    if (!isArray(id)) {
-        res.push(id);
+export const canGuanzhuDelete = (data) => {
+    let payload = {};
+    if (Array.isArray(data)) {
+        payload = { id: data };
+    } else if (typeof data === "string") {
+        payload = { followee: data };
+    } else if (data && data.followee) {
+        payload = { followee: data.followee };
+    } else if (data && data.tianjiaren) {
+        payload = { followee: data.tianjiaren };
     } else {
-        res = id;
+        // Fallback for ID list in object
+        payload = data;
     }
 
     return new Promise((resolve, reject) => {
-        http.post("/api/guanzhu/delete", res)
+        http.post("/api/guanzhu/delete", payload)
             .json()
             .then(
                 (res) => {
@@ -213,4 +78,84 @@ export const canGuanzhuDelete = (id) => {
                 }
             );
     });
+};
+
+/**
+ * ²éÑ¯ÊÇ·ñÒÑ¹Ø×¢
+ * @param {string} followee Ä¿±êÓÃ»§Ãû
+ * @returns {Promise<boolean>}
+ */
+export const checkIsFollow = (followee) => {
+    return new Promise((resolve, reject) => {
+        http.get("/api/guanzhu/isFollow", { followee }).then(res => {
+            if (res.code === 0) {
+                resolve(res.data.isFollow);
+            } else {
+                resolve(false);
+            }
+        }).catch(err => {
+            resolve(false);
+        });
+    });
+};
+
+/**
+ * ²éÑ¯ÎÒ¹Ø×¢µÄÈË
+ * @param {object} params { page, size, username }
+ */
+export const selectGuanzhuren = (params) => {
+    return http.post("/api/guanzhu/selectGuanzhuren", params);
+};
+
+/**
+ * ²éÑ¯·ÛË¿
+ * @param {object} params { page, size, username }
+ */
+export const selectTianjiaren = (params) => {
+    return http.post("/api/guanzhu/selectTianjiaren", params);
+};
+
+// ±£³ÖÒ»Ğ©¾ÉµÄµ¼³öÒÔ·À±¨´í£¬µ«¹¦ÄÜ¿ÉÄÜ²»ÔÙÊÊÓÃ
+export const GuanzhuCreateForm = () => {
+    return {};
+};
+
+export const useGuanzhuCreateForm = (id) => {
+    return { form: reactive({}), readMap: reactive({}) };
+};
+
+export const canGuanzhuSelect = (filter, result) => {
+    // ÊÊÅäĞÂµÄ²éÑ¯½Ó¿Ú? »òÕßÔİÊ±Áô¿Õ
+    // Èç¹ûÊÇ²éÑ¯¹Ø×¢ÁĞ±í£¬Ó¦¸ÃÓÃ selectGuanzhuren
+    selectGuanzhuren({ page: 1, size: 10 }).then(res => {
+        if (res.code == 0) {
+            extend(result, res.data);
+        }
+    });
+};
+
+export const useGuanzhuSelect = (filter) => {
+    const result = reactive({
+        lists: [],
+        total: {},
+    });
+    canGuanzhuSelect(filter, result);
+    return result;
+};
+
+export const canGuanzhuFindById = (id) => {
+    return http.get("/api/guanzhu/findById", { id });
+};
+
+export const useGuanzhuFindById = (id) => {
+    var form = reactive({});
+    canGuanzhuFindById(id).then((res) => {
+        extend(form, res.data);
+    });
+    return form;
+};
+
+export const canGuanzhuUpdate = (data) => {
+    // ¹Ø×¢Í¨³£Ã»ÓĞ¸üĞÂ²Ù×÷£¬Ö»ÓĞÔöÉ¾
+    return Promise.resolve({ code: 0 });
 };

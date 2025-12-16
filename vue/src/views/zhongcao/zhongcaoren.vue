@@ -41,9 +41,6 @@
                     <el-table-column prop="tianjiaren" label="添加人" width="180">
                         <template #default="{ row }"> {{ row.tianjiaren }} </template>
                     </el-table-column>
-                    <el-table-column prop="zhongcaoren" label="种草人" width="180">
-                        <template #default="{ row }"> {{ row.zhongcaoren }} </template>
-                    </el-table-column>
                     <el-table-column prop="addtime" label="添加时间">
                         <template #default="{ row }"> {{ row.addtime.substring(0, 19) }} </template>
                     </el-table-column>

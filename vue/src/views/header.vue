@@ -15,6 +15,13 @@
                 <li :class="{ current: isFullPathActive({ path: '/topic' }) }">
                     <router-link :to="{ path: '/topic' }" title="话题广场"> 话题广场 </router-link>
                 </li>
+                <li :class="{ current: isFullPathActive({ path: '/youxi/category' }) }">
+                    <router-link :to="{ path: '/youxi/category' }" title="游戏详情"> 游戏详情 </router-link>
+                </li>
+                <li :class="{ current: isFullPathActive({ path: '/mall/products' }) }">
+                    <router-link :to="{ path: '/mall/products' }" title="周边商城"> 周边商城 </router-link>
+                </li>
+
             </ul>
             <div class="right clearfix">
 
@@ -32,6 +39,8 @@
                             <template #dropdown>
                                 <el-dropdown-menu>
                                     <el-dropdown-item @click="$router.push('/admin/sy')">个人中心</el-dropdown-item>
+                                    <el-dropdown-item @click="$router.push('/mall/cart')">购物车</el-dropdown-item>
+                                    <el-dropdown-item @click="$router.push('/mall/order/list')">我的订单</el-dropdown-item>
                                     <el-dropdown-item @click="logout">退出</el-dropdown-item>
                                 </el-dropdown-menu>
                             </template>

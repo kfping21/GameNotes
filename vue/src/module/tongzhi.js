@@ -157,6 +157,29 @@ export const canTongzhiUpdate = (data) => {
 };
 
 /**
+ * 标记通知为已读
+ * @param {number} id
+ * @return {Promise<EResponseData<any>>}
+ */
+export const canTongzhiMarkRead = (id) => {
+    return new Promise((resolve, reject) => {
+        http.post("/api/tongzhi/markRead", { id })
+            .json()
+            .then(
+                (res) => {
+                    resolve(res);
+                    if (res.code == 0) {
+                        // 可以在这里触发事件，如果需要的话
+                    }
+                },
+                (err) => {
+                    reject(err);
+                }
+            );
+    });
+};
+
+/**
  * 审核是否上架
  * @param {ETongzhi} data
  * @return {Promise<EResponseData<ETongzhi>>}

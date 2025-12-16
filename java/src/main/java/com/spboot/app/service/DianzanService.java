@@ -151,8 +151,7 @@ public class DianzanService {
         mapper.insert(entityData);
         if (entityData.getId() != null) {
             Integer charuid = entityData.getId();
-            DB.execute("INSERT INTO tongzhi(tongzhineirong, yonghu, addtime) SELECT '"+post.get("biaoti")+"-笔记已被-"+SessionFactory.getUsername()+"点赞', tianjiaren, now() FROM biji WHERE id='"+post.get("biaoid")+"'");
-
+            DB.execute("INSERT INTO tongzhi(tongzhineirong, yonghu, addtime, issh) SELECT '"+post.get("biaoti")+"-笔记已被-"+SessionFactory.getUsername()+"点赞', tianjiaren, now(), '否' FROM biji WHERE id='"+post.get("biaoid")+"'");
 
 
             return findById(entityData.getId());

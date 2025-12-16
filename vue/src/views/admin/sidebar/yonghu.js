@@ -1,53 +1,5 @@
 export default [
     {
-        label: "笔记管理",
-        to: "",
-        children: [
-            {
-                label: "笔记添加",
-                to: { path: "/admin/biji/add" },
-            },
-            {
-                label: "笔记查询",
-                to: { path: "/admin/biji/tianjiaren" },
-            },
-        ],
-    },
-    {
-        label: "种草管理",
-        to: "",
-        children: [
-            {
-                label: "ta种草我",
-                to: { path: "/admin/zhongcao/tianjiaren" },
-            },
-            {
-                label: "我的种草记录",
-                to: { path: "/admin/zhongcao/zhongcaoren" },
-            },
-        ],
-    },
-
-
-    {
-        label: "评论管理",
-        to: "",
-        children: [
-            {
-                label: "我的评论",
-                to: { path: "/admin/pinglun/pinglunren" },
-            },
-            {
-                label: "ta回复我",
-                to: { path: "/admin/pinglunhuifu/pinglunren" },
-            },
-            {
-                label: "我回复ta",
-                to: { path: "/admin/pinglunhuifu/huifuren" },
-            },
-        ],
-    },
-    {
         label: "个人中心",
         to: "",
         children: [
@@ -60,20 +12,58 @@ export default [
                 to: { path: "/admin/mod" },
             },
             {
+                label: "我的点赞",
+                to: { path: "/admin/dianzan/username" },
+            },
+            {
+                label: "我的评论",
+                to: { path: "/admin/pinglun/pinglunren" },
+            },
+            {
                 label: "我的收藏",
                 to: { path: "/admin/shoucang/username" },
             },
             {
-                label: "我的点赞",
-                to: { path: "/admin/dianzan/username" },
+                label: "我的种草",
+                to: { path: "/admin/zhongcao/zhongcaoren" },
             },
             {
                 label: "我的关注",
                 to: { path: "/admin/guanzhu/guanzhuren" },
             },
+        ],
+    },
+    {
+        label: "创作中心",
+        to: "",
+        children: [
             {
-                label: "通知记录",
-                to: { path: "/admin/tongzhi/yonghu" },
+                label: "我的笔记",
+                to: { path: "/admin/biji/tianjiaren" },
+            },
+            {
+                label: "笔记创作",
+                to: { path: "/admin/biji/add" },
+            },
+            {
+                label: "收到的关注",
+                to: { path: "/admin/guanzhu/tianjiaren" },
+            },
+            {
+                label: "收到的点赞",
+                to: { path: "/admin/dianzan/tianjiaren" },
+            },
+            {
+                label: "收到的评论",
+                to: { path: "/admin/pinglun/tianjiaren" },
+            },
+            {
+                label: "收到的收藏",
+                to: { path: "/admin/shoucang/tianjiaren" },
+            },
+            {
+                label: "收到的种草",
+                to: { path: "/admin/zhongcao/tianjiaren" },
             },
         ],
     },

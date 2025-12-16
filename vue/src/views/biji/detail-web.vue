@@ -2,6 +2,11 @@
     <div class="views-biji-web-detail">
         <div>
             <e-container>
+                <div class="nav-bar" style="margin-bottom: 15px; padding-top: 20px;">
+                    <div class="back-link" @click="$router.push('/biji')" style="cursor: pointer; font-size: 14px; color: #606266; display: inline-flex; align-items: center;">
+                        <el-icon style="margin-right: 4px;"><ArrowLeft /></el-icon> 返回笔记列表
+                    </div>
+                </div>
                 <div class="title-modelbox-widget1">
                     <h3 class="section-title">
                         笔记详情 </h3>
@@ -40,6 +45,24 @@
                                                 show="youximingcheng"></e-select-view>
                              </router-link>
                              <span v-else>暂无</span>
+                        </span>
+                                        </div>
+                                        <div>
+                        <span class="name">
+                            话题：
+                        </span>
+                                            <span class="val">
+                            <span v-if="map.topics && map.topics.length">
+                                <el-tag
+                                    v-for="t in map.topics"
+                                    :key="t.id"
+                                    style="margin-right: 5px; cursor: pointer;"
+                                    @click="goToTopic(t.id)"
+                                >
+                                    {{ t.title }}
+                                </el-tag>
+                            </span>
+                            <span v-else>暂无</span>
                         </span>
                                         </div>
                                         <div>
@@ -206,6 +229,7 @@ import {session} from '@/utils/utils';
 import {extend} from '@/utils/extend';
 import {useBijiFindById, canBijiFindById, canZhongcaoCreateForm, canZhongcaoInsert, canZhongcaoDelete} from '@/module';
 import {ElLoading, ElMessage, ElMessageBox} from 'element-plus';
+import { ArrowLeft } from '@element-plus/icons-vue';
 
 const route = useRoute();
 const props = defineProps({
@@ -450,6 +474,10 @@ const goToUserDetail = (id) => {
     } else {
         ElMessage.warning('用户ID无效');
     }
+};
+
+const goToTopic = (id) => {
+    router.push({ path: '/topic/detail', query: { id } });
 };
 </script>
 

@@ -61,10 +61,51 @@ public class YouxiService {
     }
 
     /**
-     *  根据id 获取一行数据
+     *  根据id 获取一行数据（增强：返回游戏详情 + 关联笔记 + 装备列表 + 人物列表）
      */
-    public R<Youxi> findById(Integer id) {
-        return R.success(mapper.selectById(id));
+    public R<Object> findDetailById(Integer id) {
+        Youxi youxi = mapper.selectById(id);
+        if (youxi == null) return R.error("未找到游戏");
+        Map<String, Object> res = new HashMap<>();
+        // 将 youxi POJO 转为 Map，并同时保留原有字段名，向前端兼容新增 intro 字段（来自 xiangqing）
+        Map<String, Object> youxiMap = cn.hutool.core.bean.BeanUtil.beanToMap(youxi);
+        // 将 xiangqing 也以 intro 的键名返回，前端使用 youxi.intro
+        youxiMap.put("intro", youxi.getXiangqing());
+        res.put("youxi", youxiMap);
+        try {
+            // 关联笔记（通过 game_note_map）
+            String sqlNotes = "SELECT b.* FROM game_note_map m LEFT JOIN biji b ON b.id = m.note_id WHERE m.game_id = " + id + " ORDER BY m.id DESC";
+            java.util.List<java.util.Map<String, Object>> notes = DB.select(sqlNotes);
+            // 为每条笔记追加 url 字段，便于前端跳转
+            if (notes != null) {
+                for (java.util.Map<String, Object> r : notes) {
+                    Object idObj = r.get("id");
+                    r.put("url", idObj == null ? "" : "/note/" + idObj);
+                }
+            }
+            res.put("notes", notes == null ? new java.util.ArrayList<>() : notes);
+        } catch (Exception e) {
+            res.put("notes", new java.util.ArrayList<>());
+        }
+        try {
+            // 装备
+            String sqlEquip = "SELECT * FROM game_equipment WHERE game_id = " + id + " ORDER BY id DESC";
+            java.util.List<java.util.Map<String, Object>> equips = DB.select(sqlEquip);
+            res.put("equipment", equips == null ? new java.util.ArrayList<>() : equips);
+        } catch (Exception e) {
+            res.put("equipment", new java.util.ArrayList<>());
+        }
+        try {
+            // 人物
+            String sqlChars = "SELECT * FROM game_character WHERE game_id = " + id + " ORDER BY id DESC";
+            java.util.List<java.util.Map<String, Object>> chars = DB.select(sqlChars);
+            res.put("characters", chars == null ? new java.util.ArrayList<>() : chars);
+        } catch (Exception e) {
+            res.put("characters", new java.util.ArrayList<>());
+        }
+        // 周边入口（前端可根据该 URL 跳转到商品列表并带上 gameId）
+        res.put("peripheralsUrl", "/mall/products?gameId=" + id);
+        return R.success(res);
     }
 
     /**
@@ -121,13 +162,17 @@ public class YouxiService {
         QueryWrapper<Youxi> wrapper = Wrappers.query();
 
         String where = " 1=1 ";
-        // 以下是判断搜索框中是否有输入内容，判断是否前台是否有填写相关条件，符合则写入sql搜索语句
-
+        // 搜索关键字：同时匹配游戏名称和详情
+        if (!StringUtil.isNullOrEmpty(map.get("keyword"))) {
+            wrapper.apply(" ( youximingcheng LIKE '%" + map.get("keyword") + "%' OR xiangqing LIKE '%" + map.get("keyword") + "%' ) ");
+        }
+        // 名称搜索（兼容旧参数）
         if (!StringUtil.isNullOrEmpty(map.get("youximingcheng"))) {
             wrapper.like("youximingcheng", map.get("youximingcheng"));
         }
-        if (!StringUtil.isNullOrEmpty(map.get("zhuangbeiku"))) {
-            wrapper.like("zhuangbeiku", map.get("zhuangbeiku"));
+        // 按分类过滤
+        if (map.containsKey("categoryId") && map.get("categoryId") != null) {
+            try { wrapper.eq("game_category_id", Integer.parseInt(String.valueOf(map.get("categoryId")))); } catch (Exception e) { }
         }
 
         if (map.containsKey("session_name")) {
@@ -143,6 +188,20 @@ public class YouxiService {
         result.put("lists", mapper.selectPage(page, wrapper));
 
         return R.success(result);
+    }
+
+    /**
+     * 获取游戏分类列表（只读）
+     * 前端用于展示游戏分类导航/筛选
+     */
+    public R<List<Map<String, Object>>> getCategories() {
+        try {
+            java.util.List<java.util.Map<String, Object>> cats = DB.select("SELECT * FROM game_category ORDER BY sort ASC");
+            if (cats == null) cats = new java.util.ArrayList<>();
+            return R.success(cats);
+        } catch (Exception e) {
+            return R.success(new java.util.ArrayList<>());
+        }
     }
 
     /**
@@ -164,13 +223,17 @@ public class YouxiService {
         if (StringUtil.isNullOrEmpty(post.get("youxitupian"))) {
             return R.error("请填写游戏图片");
         }
+        // 处理 categoryId
+        if (post.containsKey("categoryId")) {
+            try { entityData.setCategoryId(Integer.parseInt(String.valueOf(post.get("categoryId")))); } catch (Exception e) { entityData.setCategoryId(0); }
+        }
 
         Info.handlerNullEntity(entityData);
 
         entityData.setId(null);
         mapper.insert(entityData);
         if (entityData.getId() != null) {
-            return findById(entityData.getId());
+            return findDetailById(entityData.getId());
         } else {
             return R.error("插入错误");
         }
@@ -195,10 +258,14 @@ public class YouxiService {
         if (StringUtil.isNullOrEmpty(post.get("youxitupian"))) {
             return R.error("请填写游戏图片");
         }
+        // 处理 categoryId
+        if (post.containsKey("categoryId")) {
+            try { entityData.setCategoryId(Integer.parseInt(String.valueOf(post.get("categoryId")))); } catch (Exception e) { entityData.setCategoryId(0); }
+        }
 
         mapper.updateById(entityData);
 
-        return R.success(mapper.selectById(entityData.getId()));
+        return findDetailById(entityData.getId());
     }
 
     /**

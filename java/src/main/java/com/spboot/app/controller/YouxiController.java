@@ -47,8 +47,14 @@ public class YouxiController {
     @ApiOperation(value = "根据id获取信息", httpMethod = "GET")
     @RequestMapping("/findById")
     @ApiImplicitParam(name = "id", value = "游戏对应的id", dataType = "Integer")
-    public R findById(@RequestParam Integer id) {
-        return youxiService.findById(id);
+    public R<Object> findById(@RequestParam Integer id) {
+        return youxiService.findDetailById(id);
+    }
+
+    @ApiOperation(value = "获取游戏分类列表", httpMethod = "GET")
+    @RequestMapping("/categories")
+    public R<List<Map<String, Object>>> categories() {
+        return youxiService.getCategories();
     }
 
     @ApiOperation(value = "根据id更新数据", httpMethod = "POST")

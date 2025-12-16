@@ -44,9 +44,6 @@
                     <el-table-column prop="tianjiaren" label="添加人" width="180">
                         <template #default="{ row }"> {{ row.tianjiaren }} </template>
                     </el-table-column>
-                    <el-table-column prop="guanzhuren" label="关注人" width="180">
-                        <template #default="{ row }"> {{ row.guanzhuren }} </template>
-                    </el-table-column>
 
                     <el-table-column label="操作" fixed="right" width="250">
                         <template #default="{ row }">

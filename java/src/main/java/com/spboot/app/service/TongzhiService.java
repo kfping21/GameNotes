@@ -116,6 +116,11 @@ public class TongzhiService {
             wrapper.eq("issh", map.get("issh"));
         }
 
+        // 按已读状态筛选 isread: 0/1
+        if (map.containsKey("isread") && map.get("isread") != null) {
+            try { wrapper.eq("isread", Integer.parseInt(String.valueOf(map.get("isread")))); } catch (Exception e) { }
+        }
+
         if (map.containsKey("session_name")) {
             wrapper.eq(map.get("session_name").toString(), SessionFactory.getUsername());
         }
@@ -129,6 +134,21 @@ public class TongzhiService {
         result.put("lists", mapper.selectPage(page, wrapper));
 
         return R.success(result);
+    }
+
+    /**
+     * 标记通知为已读
+     */
+    public R<Object> markRead(Integer id) {
+        try {
+            Tongzhi row = mapper.selectById(id);
+            if (row == null) return R.error("未找到通知");
+            row.setIsread(1);
+            mapper.updateById(row);
+            return R.ok();
+        } catch (Exception e) {
+            return R.error("操作失败");
+        }
     }
 
     /**

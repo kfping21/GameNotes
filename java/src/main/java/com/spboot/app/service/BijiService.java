@@ -24,10 +24,12 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class BijiService {
-
     // 获取数据库操作类mapper
     @Resource
     private BijiMapper mapper;
+
+    @Resource
+    private TopicNoteMapService topicNoteMapService;
 
     /**
      *   根据Bijimingcheng字段参数获取一行数据
@@ -63,8 +65,19 @@ public class BijiService {
     /**
      *  根据id 获取一行数据
      */
-    public R<Biji> findById(Integer id) {
-        return R.success(mapper.selectById(id));
+    public R<Object> findById(Integer id) {
+        Biji row = mapper.selectById(id);
+        // 新增：附带话题列表
+        try {
+            java.util.List<java.util.Map<String, Object>> topics = topicNoteMapService.getTopicsByNoteId(id);
+            // 将 topics 放入一个 Map 返回结构中，和原来的返回保持一致（原来是 R.success(mapper.selectById(id))）
+            Map<String, Object> res = new HashMap<>();
+            res.put("biji", row);
+            res.put("topics", topics);
+            return R.success(res);
+        } catch (Exception e) {
+            return R.success(row);
+        }
     }
 
     /**
@@ -212,6 +225,30 @@ public class BijiService {
         entityData.setId(null);
         mapper.insert(entityData);
         if (entityData.getId() != null) {
+            // 处理 topicIds（前端传入 topicIds: [1,2,3]）
+            if (post.containsKey("topicIds")) {
+                try {
+                    Object tidsObj = post.get("topicIds");
+                    java.util.List<Integer> tids = new java.util.ArrayList<>();
+                    if (tidsObj instanceof java.util.List) {
+                        for (Object o : (java.util.List) tidsObj) {
+                            try { tids.add(Integer.parseInt(String.valueOf(o))); } catch (Exception ex) { }
+                        }
+                    } else if (tidsObj instanceof String) {
+                        String s = (String) tidsObj;
+                        // 支持逗号分隔
+                        for (String part : s.split(",")) {
+                            try { tids.add(Integer.parseInt(part.trim())); } catch (Exception ex) { }
+                        }
+                    }
+                    if (!tids.isEmpty()) {
+                        topicNoteMapService.bindTopicsToNote(entityData.getId(), tids);
+                    }
+                } catch (Exception ex) {
+                    // 忽略绑定错误，但记录日志（如果有日志工具）
+                    System.out.println("绑定话题出错: " + ex.getMessage());
+                }
+            }
             return findById(entityData.getId());
         } else {
             return R.error("插入错误");
@@ -251,6 +288,27 @@ public class BijiService {
         }
 
         mapper.updateById(entityData);
+
+        // 处理 topicIds（更新时前端传入 topicIds: [1,2,3]）
+        if (post.containsKey("topicIds")) {
+            try {
+                Object tidsObj = post.get("topicIds");
+                java.util.List<Integer> tids = new java.util.ArrayList<>();
+                if (tidsObj instanceof java.util.List) {
+                    for (Object o : (java.util.List) tidsObj) {
+                        try { tids.add(Integer.parseInt(String.valueOf(o))); } catch (Exception ex) { }
+                    }
+                } else if (tidsObj instanceof String) {
+                    String s = (String) tidsObj;
+                    for (String part : s.split(",")) {
+                        try { tids.add(Integer.parseInt(part.trim())); } catch (Exception ex) { }
+                    }
+                }
+                topicNoteMapService.bindTopicsToNote(entityData.getId(), tids);
+            } catch (Exception ex) {
+                System.out.println("更新绑定话题出错: " + ex.getMessage());
+            }
+        }
 
         return R.success(mapper.selectById(entityData.getId()));
     }

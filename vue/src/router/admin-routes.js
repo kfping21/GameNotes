@@ -95,6 +95,12 @@ export default [
         component: () => import("@/views/shoucang/username.vue"),
         meta: { title: "收藏列表", authLogin: true },
     },
+    {
+        path: "shoucang/tianjiaren",
+        name: "AdminshoucangListtianjiaren",
+        component: () => import("@/views/shoucang/tianjiaren.vue"),
+        meta: { title: "收到的收藏", authLogin: true },
+    },
 
     {
         path: "dianzan",
@@ -108,8 +114,12 @@ export default [
         name: "AdmindianzanListusername",
         component: () => import("@/views/dianzan/username.vue"),
         meta: { title: "点赞列表", authLogin: true },
+    },    {
+        path: "dianzan/tianjiaren",
+        name: "AdmindianzanListtianjiaren",
+        component: () => import("@/views/dianzan/tianjiaren.vue"),
+        meta: { title: "收到的点赞", authLogin: true },
     },
-
     {
         path: "biji",
         name: "AdminbijiList",
@@ -244,6 +254,12 @@ export default [
         name: "AdminpinglunListpinglunren",
         component: () => import("@/views/pinglun/pinglunren.vue"),
         meta: { title: "评论列表", authLogin: true },
+    },
+    {
+        path: "pinglun/tianjiaren",
+        name: "AdminpinglunListtianjiaren",
+        component: () => import("@/views/pinglun/tianjiaren.vue"),
+        meta: { title: "收到的评论", authLogin: true },
     },
 
     {

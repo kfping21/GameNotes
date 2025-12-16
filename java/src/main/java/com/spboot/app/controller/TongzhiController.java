@@ -66,6 +66,16 @@ public class TongzhiController {
         return tongzhiService.findById(id);
     }
 
+    @ApiOperation(value = "标记通知为已读", httpMethod = "POST")
+    @RequestMapping("/markRead")
+    @ApiImplicitParam(name = "id", value = "通知对应的id", dataType = "Integer")
+    public R markRead(@RequestBody Map<String, Object> data) {
+        Integer id = null;
+        try { id = Integer.parseInt(String.valueOf(data.get("id"))); } catch (Exception e) { }
+        if (id == null) return R.error("缺少 id");
+        return tongzhiService.markRead(id);
+    }
+
     @ApiOperation(value = "根据id更新数据", httpMethod = "POST")
     @RequestMapping("/update")
     @ApiImplicitParam(name = "data", value = "使用json数据提交", type = "json", dataTypeClass = Tongzhi.class, paramType = "body")

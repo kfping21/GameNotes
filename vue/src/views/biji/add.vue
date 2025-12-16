@@ -33,6 +33,17 @@
                         <el-select v-model="form.guanlianyouxi"><e-select-option type="option" module="youxi" value="id" label="youximingcheng"></e-select-option></el-select>
                     </el-form-item>
 
+                    <el-form-item label="话题" prop="topicIds">
+                        <el-select v-model="form.topicIds" multiple placeholder="选择话题" style="width: 450px">
+                            <el-option
+                                v-for="t in topics"
+                                :key="t.id"
+                                :label="t.title"
+                                :value="t.id"
+                            />
+                        </el-select>
+                    </el-form-item>
+
                     <el-form-item label="视频 " prop="shipin"> <e-upload-file v-model="form.shipin"></e-upload-file> </el-form-item>
 
                     <el-form-item label="关注量 " prop="guanzhuliang" :rules="[{ validator: rule.checkNumber, message: '输入一个有效数字' }]"> <el-input type="number" placeholder="输入关注量" style="width: 450px" v-model.number="form.guanzhuliang" /> </el-form-item>
@@ -64,6 +75,7 @@
     import { session } from "@/utils/utils";
     import { ElMessage, ElMessageBox } from "element-plus";
     import { useBijiCreateForm, canBijiInsert } from "@/module";
+    import { getTopicCategories } from "@/module/topic";
     import { extend } from "vue-design-plugin";
 
     const route = useRoute();
@@ -86,6 +98,18 @@
         },
     });
     const { form } = useBijiCreateForm();
+    // Initialize topicIds
+    form.topicIds = [];
+    
+    const topics = ref([]);
+    const loadTopics = async () => {
+        const res = await getTopicCategories({ page: 1, pagesize: 100 });
+        if (res.code === 0) {
+            topics.value = res.data.lists?.records || res.data.lists || [];
+        }
+    };
+    loadTopics();
+
     const emit = defineEmits(["success"]);
     const formModel = ref();
     const loading = ref(false);

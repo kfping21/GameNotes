@@ -57,9 +57,6 @@
                     <el-table-column sortable="custom" prop="zhongcaodu" label="种草度" width="80">
                         <template #default="{ row }"> {{ row.zhongcaodu }} </template>
                     </el-table-column>
-                    <el-table-column prop="tianjiaren" label="添加人" width="180">
-                        <template #default="{ row }"> {{ row.tianjiaren }} </template>
-                    </el-table-column>
 
                     <el-table-column width="80" label="审核">
                         <template #default="{ row }">

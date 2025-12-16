@@ -22,10 +22,13 @@
           <div v-else>
             <div v-for="item in lists" :key="item.id" class="notify-item" @click="openItem(item)" :style="{background: currentItem && currentItem.id===item.id ? '#f5f7fa' : '#fff'}">
               <div style="display:flex; justify-content:space-between; align-items:center">
-                <div class="left-type">{{ typeLabel(item.type) }}</div>
+                <div class="left-type">
+                    {{ typeLabel(item.type) }}
+                    <span v-if="item.isread === 0" style="color:red; margin-left:4px;">●</span>
+                </div>
                 <div class="time">{{ item.addtime ? item.addtime.substring(0,19) : '' }}</div>
               </div>
-              <div class="content" v-html="item.tongzhineirong"></div>
+              <div class="content" v-html="item.tongzhineirong" :style="{fontWeight: item.isread === 0 ? 'bold' : 'normal'}"></div>
             </div>
           </div>
         </div>
@@ -102,7 +105,7 @@ watch(visibleLocal, (v)=>{ if(v) loadNotifications() })
 
 const lists = computed(() => store.lists)
 // badge shows number of unread notifications
-const totalCount = computed(() => (store.lists || []).filter(i => i.issh !== '是').length)
+const totalCount = computed(() => (store.lists || []).filter(i => i.isread === 0).length)
 
 // debug watch: log visible changes
 watch(
@@ -130,10 +133,10 @@ function openItem(item){
   currentItem.value = item
   view.value = 'detail'
   // 标记该条为已读并同步到后端（如果尚未已读）
-  if(item && item.issh !== '是'){
-    item.issh = '是'
+  if(item && item.isread === 0){
+    item.isread = 1
     // 更新 store 中对应项（item 是引用，已生效）
-    try{ canMarkRead(item) }catch(e){ console.error(e) }
+    try{ canTongzhiMarkRead(item.id) }catch(e){ console.error(e) }
   }
 }
 
@@ -147,21 +150,17 @@ function markAllRead(){
   // 将 store 中的通知标为已读并调用后端接口
   const listsCopy = [...store.lists]
   listsCopy.forEach(ci => {
-    if(ci.issh !== '是'){
-      ci.issh = '是'
+    if(ci.isread === 0){
+      ci.isread = 1
       // 后端更新，忽略返回
-      canMarkRead(ci)
+      canTongzhiMarkRead(ci.id)
     }
   })
   // 清空前端列表或保留已读逻辑——这里清空以示已读
-  store.lists = []
+  // store.lists = [] // 用户可能不想清空，只是标为已读。如果想清空，可以取消注释
 }
 
-import { canTongzhiUpdate } from '@/module'
-function canMarkRead(item){
-  // 保持与原来一致的接口调用
-  return canTongzhiUpdate(item).then(()=>{}).catch(()=>{})
-}
+import { canTongzhiMarkRead } from '@/module'
 
 function typeLabel(t){
   if(!t) return '通知'

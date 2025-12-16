@@ -142,12 +142,7 @@ public class PinglunService {
         mapper.insert(entityData);
         if (entityData.getId() != null) {
             Integer charuid = entityData.getId();
-            DB.execute("INSERT INTO tongzhi(tongzhineirong, yonghu, addtime) SELECT '"+post.get("biaoti")+"-有新的评论-"+SessionFactory.getUsername()+"', tianjiaren, now() FROM biji WHERE id='"+post.get("biaoid")+"'");
-
-
-
-
-
+            DB.execute("INSERT INTO tongzhi(tongzhineirong, yonghu, addtime, issh) SELECT '"+post.get("biaoti")+"-有新的评论-"+SessionFactory.getUsername()+"', tianjiaren, now(), '否' FROM biji WHERE id='"+post.get("biaoid")+"'");
 
 
             return findById(entityData.getId());

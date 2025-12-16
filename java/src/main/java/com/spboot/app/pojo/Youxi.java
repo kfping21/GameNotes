@@ -25,8 +25,9 @@ public class Youxi implements Serializable {
     private Integer guanlianbiji;
     // 游戏图片.
     private String youxitupian;
-    // 装备库.
-    private String zhuangbeiku;
+    // 分类id
+    @com.baomidou.mybatisplus.annotation.TableField("game_category_id")
+    private Integer categoryId;
     // 详情.
     private String xiangqing;
 
@@ -62,12 +63,12 @@ public class Youxi implements Serializable {
         this.youxitupian = youxitupian == null ? "" : youxitupian.trim();
     }
 
-    public String getZhuangbeiku() {
-        return zhuangbeiku;
+    public Integer getCategoryId() {
+        return categoryId;
     }
 
-    public void setZhuangbeiku(String zhuangbeiku) {
-        this.zhuangbeiku = zhuangbeiku == null ? "" : zhuangbeiku.trim();
+    public void setCategoryId(Integer categoryId) {
+        this.categoryId = categoryId == null ? 0 : categoryId;
     }
 
     public String getXiangqing() {

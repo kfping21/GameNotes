@@ -10,11 +10,21 @@
 
                 <div class="form-search">
                     <el-form @submit.prevent.stop :inline="true" size="small">
-                        <el-form-item label="游戏名称">
-                            <el-input v-model="search.youximingcheng"></el-input>
+                        <el-form-item label="关键字">
+                            <el-input v-model="search.keyword" placeholder="搜索名称或详情"></el-input>
+                        </el-form-item>
+                        <el-form-item label="分类">
+                            <el-select v-model="search.categoryId" placeholder="选择分类" clearable style="min-width: 200px">
+                                <el-option
+                                    v-for="cate in categories"
+                                    :key="cate.id"
+                                    :label="categoryLabel(cate)"
+                                    :value="cate.id"
+                                />
+                            </el-select>
                         </el-form-item>
                         <el-form-item>
-                            <el-button type="primary" @click="searchSubmit" icon="el-icon-search">查询</el-button>
+                            <el-button type="primary" @click="searchSubmit">查询</el-button>
                         </el-form-item>
                     </el-form>
                 </div>
@@ -29,8 +39,12 @@
                     <el-table-column prop="guanlianbiji" label="关联笔记" width="100">
                         <template #default="{ row }"> <e-select-view module="biji" :value="row.guanlianbiji" select="id" show="bijimingcheng"></e-select-view> </template>
                     </el-table-column>
-                    <el-table-column prop="youxitupian" label="游戏图片" width="100">
-                        <template #default="{ row }"> <e-img :src="row.youxitupian" style="max-width: 120px" /> </template>
+                    <el-table-column prop="youxitupian" label="游戏图片" width="140">
+                        <template #default="{ row }">
+                            <div style="cursor:pointer" @click="$router.push('/youxi/detail?id=' + row.id)">
+                                <e-img :src="row.youxitupian" style="max-width: 120px" />
+                            </div>
+                        </template>
                     </el-table-column>
 
                     <el-table-column label="操作" fixed="right" width="250">
@@ -53,21 +67,17 @@
 
 <script setup>
     import http from "@/utils/ajax/http";
-    import DB from "@/utils/db";
-    import router from "@/router";
-
     import { ref, reactive, watch, unref, onBeforeMount } from "vue";
     import { useRoute } from "vue-router";
-    import { session } from "@/utils/utils";
-    import { canYouxiSelect, useYouxiSelect, canYouxiDelete } from "@/module";
+    import { canYouxiDelete } from "@/module";
     import { extend } from "@/utils/extend";
     import { ElMessageBox, ElMessage } from "element-plus";
     import { InfoFilled, Edit, Delete } from "@element-plus/icons-vue";
 
     const route = useRoute();
     const search = reactive({
-        youximingcheng: "",
-        zhuangbeiku: "",
+        keyword: "",
+        categoryId: undefined,
         page: 1, // 当前页
         pagesize: 12, // 每页行数
         orderby: "id", // 排序字段
@@ -93,6 +103,25 @@
     const lists = ref([]);
     // 加载状态
     const loading = ref(false);
+
+    const categories = ref([]);
+    const normalizeLists = (payload) => payload?.lists?.records || payload?.lists || payload?.records || payload || [];
+    const categoryLabel = (cate) => cate?.name || cate?.title || cate?.categoryName || cate?.mingcheng || cate?.label || `分类${cate?.id ?? ""}`;
+
+    const loadCategories = async () => {
+        try {
+            const res = await http.get("/api/youxi/categories");
+            if (res.code === 0) {
+                categories.value = Array.isArray(res.data) ? res.data : normalizeLists(res.data);
+            } else {
+                categories.value = [];
+                ElMessage.error(res.msg || "获取分类失败");
+            }
+        } catch (error) {
+            categories.value = [];
+            console.warn("加载游戏分类失败", error);
+        }
+    };
 
     // 排序操作
     const sortChange = (e) => {
@@ -138,14 +167,27 @@
         if (unref(loading)) return;
         loading.value = true;
         search.page = page;
+        const payload = {
+            page: search.page,
+            pagesize: search.pagesize,
+            orderby: search.orderby,
+            sort: search.sort,
+        };
+        if (search.keyword) {
+            payload.keyword = search.keyword;
+        }
+        if (search.categoryId) {
+            payload.categoryId = search.categoryId;
+        }
 
-        http.post("/api/youxi/selectPages", search).then(
+        http.post("/api/youxi/selectPages", payload).then(
             (res) => {
                 loading.value = false;
                 if (res.code == 0) {
                     var data = res.data;
-                    lists.value = data.lists.records;
-                    totalCount.value = data.lists.total;
+                    const listsData = normalizeLists(data.lists || data);
+                    lists.value = listsData;
+                    totalCount.value = data.lists?.total || listsData.length;
                 }
             },
             (err) => {
@@ -156,6 +198,7 @@
     };
 
     onBeforeMount(() => {
+        loadCategories();
         loadList(1);
     });
     const searchSubmit = () => {

@@ -148,7 +148,8 @@ public class ShoucangService {
         mapper.insert(entityData);
         if (entityData.getId() != null) {
             Integer charuid = entityData.getId();
-            DB.execute("INSERT INTO tongzhi(tongzhineirong, yonghu, addtime) SELECT '"+post.get("biaoti")+"-笔记已被-"+SessionFactory.getUsername()+"收藏', tianjiaren, now() FROM biji WHERE id='"+post.get("xwid")+"'");
+            // 插入通知：带上 type/biz_type/biz_id/target_url/isread，便于前端筛选与跳转
+            DB.execute("INSERT INTO tongzhi(tongzhineirong, yonghu, addtime, issh) SELECT '"+post.get("biaoti")+"-笔记已被-"+SessionFactory.getUsername()+"收藏', tianjiaren, now(), '否' FROM biji WHERE id='"+post.get("xwid")+"'");
 
 
             return findById(entityData.getId());

@@ -33,6 +33,17 @@
                         <el-select v-model="form.guanlianyouxi"><e-select-option type="option" module="youxi" value="id" label="youximingcheng"></e-select-option></el-select>
                     </el-form-item>
 
+                    <el-form-item label="话题" prop="topicIds">
+                        <el-select v-model="form.topicIds" multiple placeholder="选择话题" style="width: 450px">
+                            <el-option
+                                v-for="t in topics"
+                                :key="t.id"
+                                :label="t.title"
+                                :value="t.id"
+                            />
+                        </el-select>
+                    </el-form-item>
+
                     <el-form-item label="视频 " prop="shipin"> <e-upload-file v-model="form.shipin"></e-upload-file> </el-form-item>
 
                     <el-form-item label="关注量 " prop="guanzhuliang" :rules="[{ validator: rule.checkNumber, message: '输入一个有效数字' }]"> <el-input type="number" placeholder="输入关注量" style="width: 450px" v-model.number="form.guanzhuliang" /> </el-form-item>
@@ -59,11 +70,12 @@
     import router from "@/router";
     import EEditor from "@/components/EEditor.vue";
 
-    import { ref, reactive, computed } from "vue";
+    import { ref, reactive, computed, watch } from "vue";
     import { useRoute } from "vue-router";
     import { session } from "@/utils/utils";
     import { ElMessage, ElMessageBox } from "element-plus";
     import { useBijiFindById, canBijiFindById, canBijiUpdate } from "@/module";
+    import { getTopicCategories } from "@/module/topic";
 
     const route = useRoute();
     const props = defineProps({
@@ -86,6 +98,25 @@
         },
     });
     const form = useBijiFindById(props.id);
+    
+    const topics = ref([]);
+    const loadTopics = async () => {
+        const res = await getTopicCategories({ page: 1, pagesize: 100 });
+        if (res.code === 0) {
+            topics.value = res.data.lists?.records || res.data.lists || [];
+        }
+    };
+    loadTopics();
+
+    // Watch for form.topics to populate form.topicIds
+    watch(() => form.topics, (newTopics) => {
+        if (newTopics && Array.isArray(newTopics)) {
+            form.topicIds = newTopics.map(t => t.id);
+        } else if (!form.topicIds) {
+            form.topicIds = [];
+        }
+    }, { immediate: true });
+
     const emit = defineEmits(["success"]);
     const formModel = ref();
     const loading = ref(false);

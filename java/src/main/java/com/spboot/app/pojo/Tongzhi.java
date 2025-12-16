@@ -27,6 +27,9 @@ public class Tongzhi implements Serializable {
     private String addtime;
     // 是否审核
     private String issh;
+    // 是否已读 0 未读 1 已读
+    @com.baomidou.mybatisplus.annotation.TableField("isread")
+    private Integer isread;
 
     public Integer getId() {
         return id;
@@ -67,5 +70,12 @@ public class Tongzhi implements Serializable {
     public void setIssh(String issh) {
         this.issh = issh == null ? "" : issh.trim();
     }
-}
 
+    public Integer getIsread() {
+        return isread == null ? 0 : isread;
+    }
+
+    public void setIsread(Integer isread) {
+        this.isread = isread == null ? 0 : isread;
+    }
+}

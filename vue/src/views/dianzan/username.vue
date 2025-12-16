@@ -26,9 +26,6 @@
                     <el-table-column type="selection" width="55"> </el-table-column
                     ><!-- 批量选择 -->
 
-                    <el-table-column prop="username" label="用户" width="180">
-                        <template #default="{ row }"> {{ row.username }} </template>
-                    </el-table-column>
                     <el-table-column prop="biaoti" label="标题">
                         <template #default="{ row }"> {{ row.biaoti }} </template>
                     </el-table-column>

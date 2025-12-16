@@ -39,6 +39,12 @@ export default [
         meta: { title: "笔记详情" },
     },
     {
+        path: "youxi/category",
+        name: "IndexyouxiCategory",
+        component: () => import("@/views/youxi/category.vue"),
+        meta: { title: "游戏分类" },
+    },
+    {
         path: "youxi/detail",
         name: "IndexyouxiDetail",
         props: (route) => ({ id: route.query.id }),
@@ -91,5 +97,37 @@ export default [
         props: (route) => ({ id: route.query.id }),
         component: () => import("@/views/topic/detail.vue"),
         meta: { title: "话题详情" },
+    },
+    {
+        path: "mall/products",
+        name: "IndexMallList",
+        component: () => import("@/views/mall/list.vue"),
+        meta: { title: "周边商城" },
+    },
+    {
+        path: "mall/detail",
+        name: "IndexMallDetail",
+        props: (route) => ({ id: route.query.id }),
+        component: () => import("@/views/mall/detail.vue"),
+        meta: { title: "商品详情" },
+    },
+    {
+        path: "mall/cart",
+        name: "IndexMallCart",
+        component: () => import("@/views/mall/cart.vue"),
+        meta: { title: "购物车", authLogin: true },
+    },
+    {
+        path: "mall/order/list",
+        name: "IndexMallOrderList",
+        component: () => import("@/views/mall/order-list.vue"),
+        meta: { title: "我的订单", authLogin: true },
+    },
+    {
+        path: "mall/order/detail",
+        name: "IndexMallOrderDetail",
+        props: (route) => ({ id: route.query.id }),
+        component: () => import("@/views/mall/order-detail.vue"),
+        meta: { title: "订单详情", authLogin: true },
     },
 ];

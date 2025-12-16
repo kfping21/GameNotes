@@ -94,7 +94,13 @@ export const canBijiFindById = (id) => {
         // 读取后台数据
         http.get("/api/biji/findById", { id }).then((res) => {
             if (res.code == 0) {
-                resolve(res.data);
+                if (res.data && res.data.biji) {
+                    // Flatten structure: merge biji fields and topics
+                    const flattened = { ...res.data.biji, topics: res.data.topics };
+                    resolve(flattened);
+                } else {
+                    resolve(res.data);
+                }
             } else {
                 reject(new Error(res.msg));
             }

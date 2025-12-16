@@ -21,9 +21,6 @@
                     <el-table-column prop="pinglunneirong" label="评论内容">
                         <template #default="{ row }"> {{ row.pinglunneirong }} </template>
                     </el-table-column>
-                    <el-table-column prop="pinglunren" label="评论人" width="180">
-                        <template #default="{ row }"> {{ row.pinglunren }} </template>
-                    </el-table-column>
                     <el-table-column prop="addtime" label="评论时间">
                         <template #default="{ row }"> {{ row.addtime.substring(0, 19) }} </template>
                     </el-table-column>

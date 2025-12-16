@@ -38,9 +38,6 @@
                     <el-table-column prop="guanlianyouxi" label="关联游戏" width="100">
                         <template #default="{ row }"> <e-select-view module="youxi" :value="row.guanlianyouxi" select="id" show="youximingcheng"></e-select-view> </template>
                     </el-table-column>
-                    <el-table-column prop="tianjiaren" label="添加人" width="180">
-                        <template #default="{ row }"> {{ row.tianjiaren }} </template>
-                    </el-table-column>
                     <el-table-column prop="zhongcaoren" label="种草人" width="180">
                         <template #default="{ row }"> {{ row.zhongcaoren }} </template>
                     </el-table-column>

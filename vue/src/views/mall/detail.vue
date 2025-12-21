@@ -6,10 +6,6 @@
                     <div class="back-link" @click="$router.push('/mall/products')" style="cursor: pointer; font-size: 14px; color: #606266; display: flex; align-items: center;">
                         <el-icon style="margin-right: 4px;"><ArrowLeft /></el-icon> 返回周边商城
                     </div>
-                    <div>
-                        <el-button type="primary" @click="$router.push('/mall/cart')">我的购物车</el-button>
-                        <el-button type="warning" @click="$router.push('/mall/order/list')">我的订单</el-button>
-                    </div>
                 </div>
                 <el-row :gutter="30">
                     <!-- 左侧图片 -->
@@ -77,6 +73,7 @@
 
 <script setup>
 import http from "@/utils/ajax/http";
+import DB from "@/utils/db";
 import { ref, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
@@ -93,10 +90,46 @@ const loadDetail = async (id) => {
     try {
         const res = await http.get(`/api/mall/products/${id}`);
         if (res.code === 0) {
-            product.value = res.data;
+            let data = res.data;
+            
+            // 尝试手动获取图片
+            try {
+                console.log("正在查询 product_image, product_id =", id);
+                const images = await DB.name("product_image")
+                    .where("product_id", id)
+                    .order("sort asc")
+                    .select();
+                console.log("详情页手动获取图片结果:", images);
+                
+                if (!images || images.length === 0) {
+                    // 调试：查询所有图片看看
+                    const allImages = await DB.name("product_image").limit(5).select();
+                    console.log("调试：product_image 表的前5条数据:", allImages);
+                }
+
+                if (images && Array.isArray(images) && images.length > 0) {
+                    data.images = images;
+                }
+            } catch (err) {
+                console.warn("详情页尝试加载 product_image 失败", err);
+            }
+
+            product.value = data;
             // 设置默认图片
-            currentImage.value = product.value.cover_url;
-            // 如果有图集，且第一张不是封面，也可以考虑逻辑。这里简单处理：默认显示封面，点击图集切换
+            let firstImage = product.value.cover_url;
+            // 优先使用非 product_ 开头的图片
+            if (product.value.images && product.value.images.length > 0) {
+                const preferred = product.value.images.find(img => {
+                    const url = img.url || img;
+                    return url && String(url).indexOf('product_') === -1 && String(url).indexOf('/upload/') !== -1;
+                });
+                if (preferred) {
+                    firstImage = preferred.url || preferred;
+                } else if (!firstImage) {
+                    firstImage = product.value.images[0].url || product.value.images[0];
+                }
+            }
+            currentImage.value = firstImage;
         } else {
             ElMessage.error(res.msg || "加载商品详情失败");
         }

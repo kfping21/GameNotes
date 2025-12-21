@@ -10,17 +10,8 @@
 
                 <div class="form-search">
                     <el-form @submit.prevent.stop :inline="true" size="small">
-                        <el-form-item label="笔记名称">
-                            <el-input v-model="search.bijimingcheng"></el-input>
-                        </el-form-item>
-                        <el-form-item label="标签">
-                            <el-select v-model="search.biaoqian"><el-option label="请选择" value=""></el-option><e-select-option type="option" module="biaoqian" value="id" label="biaoqianmingcheng"></e-select-option></el-select>
-                        </el-form-item>
-                        <el-form-item label="关联游戏">
-                            <el-select v-model="search.guanlianyouxi"><el-option label="请选择" value=""></el-option><e-select-option type="option" module="youxi" value="id" label="youximingcheng"></e-select-option></el-select>
-                        </el-form-item>
-                        <el-form-item label="关注人">
-                            <el-input v-model="search.guanzhuren"></el-input>
+                        <el-form-item label="添加人">
+                            <el-input v-model="search.tianjiaren"></el-input>
                         </el-form-item>
                         <el-form-item>
                             <el-button type="primary" @click="searchSubmit" icon="el-icon-search">查询</el-button>
@@ -32,16 +23,7 @@
                     <el-table-column type="index" label="#"></el-table-column>
                     <!-- 序号 -->
 
-                    <el-table-column prop="bijimingcheng" label="笔记名称">
-                        <template #default="{ row }"> {{ row.bijimingcheng }} </template>
-                    </el-table-column>
-                    <el-table-column prop="biaoqian" label="标签">
-                        <template #default="{ row }"> <e-select-view module="biaoqian" :value="row.biaoqian" select="id" show="biaoqianmingcheng"></e-select-view> </template>
-                    </el-table-column>
-                    <el-table-column prop="guanlianyouxi" label="关联游戏" width="100">
-                        <template #default="{ row }"> <e-select-view module="youxi" :value="row.guanlianyouxi" select="id" show="youximingcheng"></e-select-view> </template>
-                    </el-table-column>
-                    <el-table-column prop="tianjiaren" label="添加人" width="180">
+                    <el-table-column prop="tianjiaren" label="添加人">
                         <template #default="{ row }"> {{ row.tianjiaren }} </template>
                     </el-table-column>
 
@@ -78,11 +60,7 @@
 
     const route = useRoute();
     const search = reactive({
-        bijiid: "",
-        bijimingcheng: "",
-        biaoqian: "",
-        guanlianyouxi: "",
-        guanzhuren: "",
+        tianjiaren: "",
         page: 1, // 当前页
         pagesize: 12, // 每页行数
         orderby: "id", // 排序字段

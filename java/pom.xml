@@ -23,12 +23,7 @@
     </properties>
 
     <dependencies>
-        <!-- 私聊 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-websocket</artifactId>
-        </dependency>
-        <!-- 私聊 -->
+        <!-- 绉佽亰 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
@@ -59,7 +54,7 @@
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <scope>runtime</scope>
-            <version>8.0.25</version><!-- MYSQL 8 以上把版本对应就好 -->
+            <version>8.0.25</version><!-- MYSQL 8 浠ヤ笂鎶婄増鏈搴斿氨濂?-->
         </dependency>
 
         <dependency>
@@ -68,7 +63,7 @@
             <version>1.0.9.RELEASE</version>
         </dependency>
 
-        <!-- servlet依赖. -->
+        <!-- servlet渚濊禆. -->
         <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
@@ -86,7 +81,7 @@
             <version>20.0</version>
         </dependency>
 
-        <!-- tomcat的支持.-->
+        <!-- tomcat鐨勬敮鎸?-->
         <dependency>
             <groupId>org.apache.tomcat.embed</groupId>
             <artifactId>tomcat-embed-jasper</artifactId>
@@ -124,7 +119,7 @@
             <version>2.9.2</version>
         </dependency>
 
-        <!-- JSON工具集 -->
+        <!-- JSON宸ュ叿闆?-->
         <dependency>
             <groupId>com.jntoo</groupId>
             <artifactId>db-query-spring-boot-starter</artifactId>
@@ -138,7 +133,7 @@
 
 
 
-        <!--上传-->
+        <!--涓婁紶-->
         <dependency>
             <groupId>commons-fileupload</groupId>
             <artifactId>commons-fileupload</artifactId>
@@ -159,17 +154,6 @@
 
 
         <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger-ui</artifactId>
-            <version>2.9.2</version>
-        </dependency>
-        <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger2</artifactId>
-            <version>2.9.2</version>
-        </dependency>
-
-        <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
             <version>5.7.5</version>
@@ -187,7 +171,22 @@
             <version>1.4.0</version>
         </dependency>
 
-        <!-- 验证码 -->
+        <!-- HTTP client for AI calls -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.11.0</version>
+        </dependency>
+
+        <!-- Lombok for @Slf4j / @Data etc -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.30</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- 楠岃瘉鐮?-->
         <dependency>
             <groupId>com.github.penggle</groupId>
             <artifactId>kaptcha</artifactId>
@@ -212,9 +211,7 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>1.4.2.RELEASE</version>
                 <configuration>
-                    <!-- 工程主入口-->
                     <mainClass>com.spboot.app.StartApplication</mainClass>
                 </configuration>
                 <executions>
@@ -234,6 +231,17 @@
         <repository>
             <id>aliyun</id>
             <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <!-- Volcengine 官方仓库，用于拉取 ark runtime SDK -->
+        <repository>
+            <id>volcengine</id>
+            <url>https://artifact.bytedance.com/repository/volcengine/</url>
             <releases>
                 <enabled>true</enabled>
             </releases>

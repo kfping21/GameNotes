@@ -118,27 +118,24 @@ INSERT INTO `dianzan` VALUES (19, '002', 3, 'biji', '3D无缝大地图+新剧本
 -- ----------------------------
 -- Table structure for guanzhu
 -- ----------------------------
-DROP TABLE IF EXISTS `guanzhu`;
-CREATE TABLE `guanzhu`  (
-  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-  `bijiid` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '笔记id',
-  `bijibianhao` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '笔记编号',
-  `bijimingcheng` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '笔记名称',
-  `biaoqian` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '标签',
-  `guanlianyouxi` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联游戏',
-  `tianjiaren` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '添加人',
-  `guanzhuren` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '关注人',
-  PRIMARY KEY (`id`) USING BTREE,
-  INDEX `biji_index`(`bijiid`) USING BTREE,
-  INDEX `guanlianyouxi_index`(`guanlianyouxi`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 23 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '关注' ROW_FORMAT = Dynamic;
+DROP TABLE IF EXISTS guanzhu;
+CREATE TABLE guanzhu (
+  id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  follower varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '关注者（用户名或用户标识）',
+  followee varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '被关注者（用户名或用户标识）',
+  status tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态：1=有效，0=取消（可选）',
+  created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '关注时间',
+  updated_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (id) USING BTREE,
+  UNIQUE KEY uniq_follower_followee (follower,followee) USING BTREE,
+  KEY idx_follower (follower) USING BTREE,
+  KEY idx_followee (followee) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='用户关注（follower -> followee）' ROW_FORMAT=Dynamic;
 
 -- ----------------------------
 -- Records of guanzhu
 -- ----------------------------
-INSERT INTO `guanzhu` VALUES (17, 2, '112620407227', '《三角洲行动》全面战场隐藏彩蛋全攻略', '1,2', 1, '002', '001');
-INSERT INTO `guanzhu` VALUES (22, 4, '112621273127', '和四个妹子流落荒岛游戏初体验——《孤岛笔记》', '7,4,3', 2, '001', '002');
-
+INSERT INTO guanzhu (follower, followee, status, created_at, updated_at) VALUES ('001', '002', 1, NOW(), NOW()), ('002', '001', 1, NOW(), NOW());
 -- ----------------------------
 -- Table structure for lunbotu
 -- ----------------------------
@@ -570,6 +567,7 @@ CREATE TABLE `topic_chat_room`  (
   `topic_main_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '大话题ID',
   `topic_sub_id` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '小话题ID',
   `name` varchar(255) NOT NULL DEFAULT '' COMMENT '聊天室名称',
+  `owner_id` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '房主用户ID(yonghu.id)',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `main_idx`(`topic_main_id`) USING BTREE,
@@ -644,3 +642,250 @@ CREATE TABLE `product_image`  (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品图片' ROW_FORMAT = Dynamic;
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- sample topic inserts (for testing)
+INSERT INTO `topic_main` (`id`, `title`, `intro`, `tag_ids`, `created_by`, `status`, `created_at`) VALUES
+                                                                                                       (1, '热门游戏讨论', '针对近期热门游戏的玩法、彩蛋、活动讨论与攻略分享', '1,2', 1, 'active', NOW()),
+                                                                                                       (2, '单机佳作推荐', '玩家们推荐的高质量单机游戏与体验评测', '3', 1, 'active', NOW()),
+                                                                                                       (3, '周边周边', '与游戏相关的周边商品、手办、周边测评交流', '4', 2, 'active', NOW());
+
+INSERT INTO `topic_note_map` (`id`, `topic_id`, `note_id`, `created_at`) VALUES
+                                                                             (1, 1, 1, NOW()),
+                                                                             (2, 1, 2, NOW()),
+                                                                             (3, 1, 3, NOW()),
+                                                                             (4, 2, 4, NOW());
+
+INSERT INTO topic_chat_room (`topic_main_id`, `owner_id`, `name`, `created_at`)
+VALUES
+    (1, 1, '三角洲行动 聊天室', NOW()),
+    (1, 2, '怪物乐土 新手交流群', NOW());
+
+INSERT INTO `topic_chat_message` (`id`, `room_id`, `sender_id`, `content`, `created_at`) VALUES
+                                                                                             (1, 1, 1, '欢迎来到《三角洲行动》话题聊天室，大家可以在这里分享彩蛋与攻略。', NOW()),
+                                                                                             (2, 1, 2, '楼主有关于第5章的攻略吗？', NOW()),
+                                                                                             (3, 2, 1, '新手建议先完成主线任务，获取基础资源。', NOW());
+
+DROP TABLE IF EXISTS `topic_discussion`;
+-- 新建话题讨论表（utf8mb4）
+CREATE TABLE IF NOT EXISTS `topic_discussion` (
+                                                  `id` INT NOT NULL AUTO_INCREMENT,
+                                                  `topic_id` INT NOT NULL DEFAULT 0 COMMENT '对应 topic_main.id',
+                                                  `content` TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '讨论内容',
+                                                  `created_by` INT NOT NULL DEFAULT 0 COMMENT '发布者用户id（可0）',
+                                                  `status` VARCHAR(32) NOT NULL DEFAULT 'normal' COMMENT '状态，如 normal/hidden',
+                                                  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                                  PRIMARY KEY (`id`),
+                                                  KEY `idx_topic_id` (`topic_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='话题讨论表（每条为一个讨论/回复）';
+
+INSERT INTO `topic_discussion` (`topic_id`, `content`, `created_by`, `status`, `created_at`)
+VALUES
+    (1, '欢迎来到话题 1 的讨论区，这里可以随便聊聊话题相关内容。', 2, 'normal', NOW()),
+    (1, '赞同楼上观点，也推荐查看相关笔记。', 3, 'normal', NOW()),
+    (2, '话题2 的第一个讨论条目，用于演示。', 4, 'normal', NOW());
+
+
+-- 2.2 先将 topic_chat_room.topic_sub_id 置为 0，避免丢失引用导致问题
+UPDATE topic_chat_room SET topic_sub_id = 0 WHERE topic_sub_id IS NOT NULL;
+
+-- 2.3 删除列（DROP COLUMN）
+ALTER TABLE topic_chat_room DROP COLUMN topic_sub_id;
+
+DROP TABLE topic_sub;
+
+ALTER TABLE `tongzhi`
+    ADD COLUMN `type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'system' COMMENT '通知类型: like|fav|comment|follow|system';
+
+-- 2) 基于文本内容为历史数据设置类型（请在执行前备份 tongzhi）
+UPDATE `tongzhi` SET `type` = 'like' WHERE `tongzhineirong` LIKE '%点赞%';
+UPDATE `tongzhi` SET `type` = 'fav' WHERE `tongzhineirong` LIKE '%收藏%';
+UPDATE `tongzhi` SET `type` = 'comment' WHERE `tongzhineirong` LIKE '%评论%';
+UPDATE `tongzhi` SET `type` = 'follow' WHERE `tongzhineirong` LIKE '%关注%' OR `tongzhineirong` LIKE '%粉丝%';
+
+-- 1) 在 tongzhi 表新增用于跳转/分类的字段
+ALTER TABLE `tongzhi`
+    ADD COLUMN `biz_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '业务类型例如 biji/user/topic',
+    ADD COLUMN `biz_id` int(10) DEFAULT NULL COMMENT '业务ID（如笔记id/用户id/话题id）',
+    ADD COLUMN `target_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '前端可直接跳转的链接（优先使用）';
+
+-- SQL 片段 A：创建游戏分类表（game_category） -- 片段 A START -- 游戏分类表（分类下可以包含多个游戏）
+DROP TABLE IF EXISTS game_category; CREATE TABLE game_category (
+    id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    name varchar(100) NOT NULL DEFAULT '' COMMENT '分类名称',
+    sort int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '排序',
+    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='游戏分类' ROW_FORMAT=Dynamic;
+-- 示例：插入若干分类（你可以按需修改）
+INSERT INTO game_category (id,name,sort,created_at) VALUES (1, '角色扮演', 10, NOW()), (2, '动作竞技', 20, NOW()), (3, '策略竞技', 30, NOW()), (4, '休闲娱乐', 40, NOW()); -- 片段 A END
+-- SQL 片段 B：修改 youxi 表 —— 新增 category_id（先新增，再根据需要删除旧列） -- 片段 B START -- 1) 备份（建议手动备份表结构/数据） -- 2) 新增 category_id 列
+ALTER TABLE youxi ADD COLUMN category_id int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '游戏分类ID' AFTER youxitupian, ADD INDEX idx_category_id (category_id);
+-- 3) 示例：把已有游戏分配到分类（示例，按你期望调整）
+UPDATE youxi SET category_id = 1 WHERE id IN (1,3); -- 三角洲, 怪物乐土装备 -> 角色扮演
+UPDATE youxi SET category_id = 2 WHERE id = 2; -- 王者荣耀 -> 动作竞技
+UPDATE youxi SET category_id = 1 WHERE id = 4; -- 孤岛笔记 -> 角色扮演
+-- 片段 B END
+-- SQL 片段 C：新增表 game_equipment、game_character、game_note_map（装备/人物/游戏-笔记关联） -- 片段 C START
+DROP TABLE IF EXISTS game_equipment;
+CREATE TABLE game_equipment (
+    id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    game_id int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'youxi.id',
+    name varchar(255) NOT NULL DEFAULT '' COMMENT '装备名称',
+    cover_url varchar(255) NOT NULL DEFAULT '' COMMENT '封面',
+    type varchar(100) NOT NULL DEFAULT '' COMMENT '类型',
+    stats_json longtext NULL COMMENT '属性/数值（JSON）',
+    intro longtext NULL COMMENT '简介',
+    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id) USING BTREE,
+    INDEX idx_game_equipment_game (game_id) USING BTREE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='游戏装备库' ROW_FORMAT=Dynamic;
+DROP TABLE IF EXISTS game_character;
+CREATE TABLE game_character (
+    id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    game_id int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'youxi.id',
+    name varchar(255) NOT NULL DEFAULT '' COMMENT '人物名称',
+    avatar_url varchar(255) NOT NULL DEFAULT '' COMMENT '头像',
+    role varchar(100) NOT NULL DEFAULT '' COMMENT '职业/定位',
+    skills_json longtext NULL COMMENT '技能/属性（JSON）',
+    intro longtext NULL COMMENT '简介',
+    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id) USING BTREE,
+    INDEX idx_game_character_game (game_id) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='游戏人物库' ROW_FORMAT=Dynamic;
+DROP TABLE IF EXISTS game_note_map;
+CREATE TABLE game_note_map (
+    id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    game_id int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'youxi.id',
+    note_id int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'biji.id',
+    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id) USING BTREE,
+    INDEX idx_game_note_game (game_id) USING BTREE,
+    INDEX idx_game_note_note (note_id) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='游戏-笔记关联' ROW_FORMAT=Dynamic; -- 片段 C END
+-- SQL 片段 D：插入示例数据（分类、装备、人物、游戏-笔记映射） -- 片段 D START -- 示例装备（按需修改/扩充）
+INSERT INTO game_equipment (game_id,name,cover_url,type,stats_json,intro,created_at) VALUES (1,'三角洲突击步枪','/upload/80314d7ae2f3b9a607d5fe1699da1ce1.mp4','武器','{"atk":58,"range":40}','高伤害突击步枪，适合中距离作战',NOW()), (2,'荣耀之刃','/upload/8171784b011f85390699726a2d387ae7.png','武器','{"atk":72,"speed":12}','适合快速切入的刀刃类武器',NOW()), (4,'孤岛木弓','/upload/abe5e939c727a561a748fe13a3d4bf38.png','远程','{"atk":34,"crit":5}','手工制作的木弓',NOW());
+-- 示例人物（按需修改/扩充）
+INSERT INTO game_character (game_id,name,avatar_url,role,skills_json,intro,created_at) VALUES (1,'突击手A','/upload/1e1ee48276ecb6a7e426ed451cfe8f0f.png','输出','[{"name":"冲锋","power":50}]','近战突击手，擅长推进',NOW()), (2,'战士B','/upload/51a24bb7e2edad78d710919c71935d9b.png','坦克','[{"name":"守护","power":30}]','团队前排，抗伤害',NOW()), (4,'弓手C','/upload/7e88d8d60e82adfe830549301996fe8f.png','远程','[{"name":"狙击","power":70}]','远程高伤害角色',NOW());
+-- 示例：将已有 youxi 与 biji 建立映射（注意：note_id 需对应你数据库中真实的 biji.id） -- 根据你提供的 youxi 表示例，使用其 guanlianbiji 值作为示例 note_id（请根据实际 biji 表情况调整）
+INSERT INTO game_note_map (game_id,note_id,created_at) VALUES (1, 2, NOW()), (1, 1, NOW()), (2, 4, NOW()), (3, 1, NOW()), (4, 4, NOW()); -- 片段 D END
+-- SQL 片段 E（可选 & 风险操作）：删除不再需要的表/字段（慎重执行，建议先备份） -- 片段 E START -- 如果确定不再使用 game_tag_map（你之前说要去掉），可以删除：
+DROP TABLE IF EXISTS game_tag_map;
+-- 如果确认 youxi.zhuangbeiku 的历史数据已迁移或不再需要，可以删除该列（会丢失原字段内容）
+ALTER TABLE youxi DROP COLUMN zhuangbeiku;
+
+-- 1) 删除游戏-标签关联表（如果存在）
+DROP TABLE IF EXISTS game_tag_map;
+-- 2) 检查并删除 youxi.tag_ids 列（如果存在） -- 先检查（手动确认再执行 DROP）
+ SHOW COLUMNS FROM youxi LIKE 'tag_ids'; -- 如果上面返回行，才执行下面删除语句（防止报错）
+#  ALTER TABLE youxi DROP COLUMN tag_ids;
+-- 3) 确保 youxi 有分类列 game_category_id（若不存在则添加） -- 如果你的 MySQL 支持 IF NOT EXISTS，可尝试；否则先运行 SHOW COLUMNS 再手动添加。
+# SHOW COLUMNS FROM youxi LIKE 'game_category_id';
+# ALTER TABLE youxi ADD COLUMN IF NOT EXISTS game_category_id int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '游戏分类ID' AFTER youxitupian,
+#     ADD INDEX IF NOT EXISTS idx_game_category_id (game_category_id);
+-- 4) 插入/更新示例分类（若已存在会覆盖排序）
+INSERT INTO game_category (id, name, sort, created_at) VALUES (1, '角色扮演', 10, NOW()), (2, '动作竞技', 20, NOW()), (3, '策略竞技', 30, NOW()), (4, '休闲娱乐', 40, NOW()) ON DUPLICATE KEY UPDATE name=VALUES(name), sort=VALUES(sort);
+-- 5) 为现有 youxi 行设置分类示例（请按需调整 id 映射）
+UPDATE youxi SET game_category_id = 1 WHERE id IN (1,3);
+UPDATE youxi SET game_category_id = 2 WHERE id = 2;
+UPDATE youxi SET game_category_id = 1 WHERE id = 4;
+-- 6) 新建装备表（若已存在可跳过或用 DROP TABLE IF EXISTS）
+DROP TABLE IF EXISTS game_equipment;
+CREATE TABLE game_equipment (
+    id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    game_id int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'youxi.id',
+    name varchar(255) NOT NULL DEFAULT '' COMMENT '装备名称',
+    cover_url varchar(255) NOT NULL DEFAULT '' COMMENT '封面',
+    type varchar(100) NOT NULL DEFAULT '' COMMENT '类型',
+    stats_json longtext NULL COMMENT '属性/数值（JSON）',
+    intro longtext NULL COMMENT '简介',
+    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id) USING BTREE,
+    INDEX idx_game_equipment_game(game_id) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '游戏装备库' ROW_FORMAT = Dynamic;
+-- 7) 新建人物表
+DROP TABLE IF EXISTS game_character;
+CREATE TABLE game_character (
+    id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    game_id int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'youxi.id',
+    name varchar(255) NOT NULL DEFAULT '' COMMENT '人物名称',
+    avatar_url varchar(255) NOT NULL DEFAULT '' COMMENT '头像',
+    role varchar(100) NOT NULL DEFAULT '' COMMENT '职业/定位',
+    skills_json longtext NULL COMMENT '技能/属性（JSON）',
+    intro longtext NULL COMMENT '简介',
+    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id) USING BTREE,
+    INDEX idx_game_character_game(game_id) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '游戏人物库' ROW_FORMAT = Dynamic;
+-- 8) 新建游戏-笔记关联表（game_note_map）
+DROP TABLE IF EXISTS game_note_map;
+CREATE TABLE game_note_map (
+    id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    game_id int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'youxi.id',
+    note_id int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'biji.id',
+    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id) USING BTREE,
+    INDEX idx_game_note_game(game_id) USING BTREE,
+    INDEX idx_game_note_note(note_id) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '游戏-笔记关联' ROW_FORMAT = Dynamic;
+-- 9) 插入示例装备数据（按需修改路径与数值）
+INSERT INTO game_equipment (game_id, name, cover_url, type, stats_json, intro, created_at) VALUES (1, '三角洲突击步枪', '/upload/80314d7ae2f3b9a607d5fe1699da1ce1.png', '武器', '{"atk":58,"range":40}', '高伤害突击步枪，适合中距离作战', NOW()), (2, '荣耀之刃', '/upload/8171784b011f85390699726a2d387ae7.png', '武器', '{"atk":72,"speed":12}', '适合快速切入的刀刃类武器', NOW()), (4, '孤岛木弓', '/upload/abe5e939c727a561a748fe13a3d4bf38.png', '远程', '{"atk":34,"crit":5}', '手工制作的木弓', NOW());
+-- 10) 插入示例人物数据
+INSERT INTO game_character (game_id, name, avatar_url, role, skills_json, intro, created_at) VALUES (1, '突击手A', '/upload/1e1ee48276ecb6a7e426ed451cfe8f0f.png', '输出', '[{"name":"冲锋","power":50}]', '近战突击手，擅长推进', NOW()), (2, '战士B', '/upload/51a24bb7e2edad78d710919c71935d9b.png', '坦克', '[{"name":"守护","power":30}]', '团队前排，抗伤害', NOW()), (4, '弓手C', '/upload/7e88d8d60e82adfe830549301996fe8f.png', '远程', '[{"name":"狙击","power":70}]', '远程高伤害角色', NOW());
+-- 11) 插入示例游戏-笔记映射（请确保 biji 表中存在对应 note_id，否则前端看到为空）
+INSERT INTO game_note_map (game_id, note_id, created_at) VALUES (1, 2, NOW()), (1, 1, NOW()), (2, 4, NOW()), (3, 1, NOW()), (4, 4, NOW());
+-- 12) （可选）如果你确认要删除历史字段 zhuangbeiku（注意：会丢失该列所有数据，先备份） -- SHOW COLUMNS FROM youxi LIKE 'zhuangbeiku'; -- ALTER TABLE youxi DROP COLUMN zhuangbeiku;
+
+-- 示例：为游戏（youxi）插入评论（替换你想要的用户名/内容/游戏 id）
+INSERT INTO pinglun (biao,biaoid,biaoti,pingfen,pinglunneirong,pinglunren,addtime) VALUES ('youxi', 1, '三角洲 - 很棒的体验', 5, '游戏节奏紧凑，玩法有深度，推荐！', '001', NOW()), ('youxi', 1, '三角洲 - 图像出色', 4, '画面表现力强，但优化有提升空间。', '002', NOW()), ('youxi', 2, '王者荣耀 - 入门建议', 5, '团队配合非常重要，新手建议先练一个位置。', '003', NOW()), ('youxi', 3, '怪物乐土 - 装备不错', 4, '装备设计有特色，适合喜欢收集的玩家。', '004', NOW()), ('youxi', 4, '孤岛笔记 - 有趣', 5, '剧情代入感强，值得一试。', '005', NOW());
+
+ALTER TABLE tongzhi ADD COLUMN isread tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否已读 0 未读 1 已读';
+
+-- 示例：插入商品分类
+INSERT INTO product_category (id, name, parent_id, sort, created_at) VALUES (1, '周边服饰', 0, 10, NOW()), (2, '游戏周边', 0, 20, NOW()), (3, '角色手办', 2, 30, NOW());
+-- 示例：插入商品（关联 gameId=2）
+INSERT INTO product (id, game_id, category_id, name, cover_url, price, stock, tags, intro, created_at) VALUES (1, 2, 2, '王者荣耀 官方周边 T 恤', '/upload/product_shirt.png', 129.00, 100, 'T恤,周边,服饰', '
+官方授权王者荣耀短袖，纯棉舒适。
+', NOW()), (2, 2, 3, '孤岛笔记 限量手办', '/upload/product_fig.png', 399.00, 20, '手办,限量', '
+孤岛笔记角色手办，1/8 比例。
+', NOW()), (3, 1, 2, '三角洲 纪念徽章', '/upload/product_badge.png', 39.00, 200, '徽章,收藏', '
+金属材质，纪念徽章。
+', NOW());
+
+-- 示例：插入商品图片
+INSERT INTO product_image (product_id, url, sort) VALUES (1, '/upload/product_shirt_1.png', 1), (1, '/upload/product_shirt_2.png', 2), (2, '/upload/product_fig_1.png', 1), (3, '/upload/product_badge_1.png', 1);
+
+-- 3) 如果已有 product，但封面为空，可以用下面 UPDATE 把封面设成仓库里现成的图片（按 product.id 修改）
+UPDATE product SET cover_url = '/upload/3aeceb6a090a7aee31488e41175b4d8a.png' WHERE id = 1; UPDATE product SET cover_url = '/upload/8171784b011f85390699726a2d387ae7.png' WHERE id = 2; UPDATE product SET cover_url = '/upload/abe5e939c727a561a748fe13a3d4bf38.png' WHERE id = 3;
+-- 4) 向 product_image 表插入图片（示例：给每个商品添加 1~2 张图片）
+INSERT INTO product_image (product_id, url, sort) VALUES (1, '/upload/3aeceb6a090a7aee31488e41175b4d8a.png', 1), (1, '/upload/51a24bb7e2edad78d710919c71935d9b.png', 2), (2, '/upload/8171784b011f85390699726a2d387ae7.png', 1), (3, '/upload/abe5e939c727a561a748fe13a3d4bf38.png', 1);
+
+-- 购物车表（存每个用户加入的商品）
+CREATE TABLE IF NOT EXISTS cart (
+    id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    product_id int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'product.id',
+    quantity int(10) UNSIGNED NOT NULL DEFAULT 1 COMMENT '数量',
+    username varchar(50) NOT NULL DEFAULT '' COMMENT '用户名（session 存放的用户名）',
+    added_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '加入时间',
+    PRIMARY KEY (id) USING BTREE,
+    INDEX idx_user(username) USING BTREE, INDEX idx_product(product_id) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='购物车' ROW_FORMAT=Dynamic;
+-- 订单主表（简单记录，订单创建即写入）
+CREATE TABLE IF NOT EXISTS orders (
+    id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    user varchar(50) NOT NULL DEFAULT '' COMMENT '下单用户名',
+    total_amount decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '订单总额',
+    status varchar(32) NOT NULL DEFAULT 'pending' COMMENT '订单状态：pending/paid/shipped/cancelled',
+    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '下单时间',
+    PRIMARY KEY (id) USING BTREE, INDEX idx_user(user) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='订单' ROW_FORMAT=Dynamic;
+-- 订单明细表
+CREATE TABLE IF NOT EXISTS order_items (
+    id int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    order_id int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'orders.id',
+    product_id int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'product.id',
+    quantity int(10) UNSIGNED NOT NULL DEFAULT 1 COMMENT '数量',
+    unit_price decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '单价',
+    created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '记录时间',
+    PRIMARY KEY (id) USING BTREE,
+    INDEX idx_order(order_id) USING BTREE, INDEX idx_product(product_id) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='订单明细' ROW_FORMAT=Dynamic;

@@ -1,9 +1,6 @@
 <template>
     <div class="footer mt10">
         <div class="copyrightnr">
-            地址：xxxxxxxxxxxxx　　电话：0000-00000000　　手机：12312312312
-            <br />
-            版权所有：{{ $order.title }} 　　ICP备********号
         </div>
     </div>
 </template>

@@ -4,10 +4,6 @@
             <div class="title-modelbox-widget1">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                     <h3 class="section-title" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">周边商城</h3>
-                    <div>
-                        <el-button type="primary" @click="$router.push('/mall/cart')">我的购物车</el-button>
-                        <el-button type="warning" @click="$router.push('/mall/order/list')">我的订单</el-button>
-                    </div>
                 </div>
                 <div class="sidebar-widget-body">
                     <div class="floor_goods_wrap clearfix">
@@ -44,7 +40,7 @@
                                 <div class="floor_goods_wrap_li">
                                     <div class="floor_goods_wrap_b">
                                         <router-link :to="{ path: '/mall/detail', query: { id: r.id } }" class="floor_goods_img">
-                                            <e-img :src="r.cover_url" pb="100"></e-img>
+                                                <e-img :src="getProductImage(r)" pb="100"></e-img>
                                         </router-link>
                                         <router-link :to="{ path: '/mall/detail', query: { id: r.id } }" class="floor_goods_tit">{{ r.name }}</router-link>
                                         <div class="floor_goods_txt" style="color: #f56c6c; font-weight: bold;">￥{{ r.price }}</div>
@@ -111,7 +107,35 @@ const loadList = async () => {
     try {
         const res = await http.get("/api/mall/products", search);
         if (res.code === 0) {
-            lists.value = res.data.records;
+            let records = res.data.records;
+            
+            // 尝试手动获取图片（如果接口没返回 images）
+            try {
+                const ids = records.map(r => r.id);
+                if (ids.length > 0) {
+                    // 尝试从 product_image 表获取图片
+                    const images = await DB.name("product_image")
+                        .where("product_id", "in", ids)
+                        .order("sort asc")
+                        .select();
+                    
+                    console.log("列表页手动获取图片:", images);
+
+                    if (images && Array.isArray(images)) {
+                        records.forEach(r => {
+                            // 将图片关联到商品
+                            const productImages = images.filter(img => img.product_id == r.id);
+                            if (productImages.length > 0) {
+                                r.images = productImages;
+                            }
+                        });
+                    }
+                }
+            } catch (err) {
+                console.warn("尝试加载 product_images 失败，可能表不存在", err);
+            }
+
+            lists.value = records;
             totalCount.value = res.data.total;
         } else {
             // 如果后端返回非0，可能是接口未就绪或报错，尝试清空列表
@@ -135,6 +159,32 @@ const searchSubmit = () => {
 const selectCategory = (id) => {
     search.categoryId = id;
     searchSubmit();
+};
+
+const getProductImage = (item) => {
+    // 优先使用非默认命名的图片（假设默认命名包含 product_，而上传的图片是哈希名）
+    const isPreferred = (url) => {
+        if (!url) return false;
+        const s = String(url);
+        return s.indexOf('product_') === -1 && s.indexOf('/upload/') !== -1;
+    };
+
+    // 1. 尝试从 images 数组中找
+    if (item.images && Array.isArray(item.images)) {
+        const found = item.images.find(img => isPreferred(img.url || img));
+        if (found) return found.url || found;
+    }
+
+    // 2. 检查 cover_url
+    if (isPreferred(item.cover_url)) return item.cover_url;
+
+    // 3. 再次尝试 images 数组的第一个
+    if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+        return item.images[0].url || item.images[0];
+    }
+
+    // 4. 兜底
+    return item.cover_url || item.image || item.tupian || item.fengmian || item.img || "";
 };
 
 onMounted(() => {

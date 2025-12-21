@@ -130,4 +130,10 @@ export default [
         component: () => import("@/views/mall/order-detail.vue"),
         meta: { title: "订单详情", authLogin: true },
     },
+    {
+        path: "ai",
+        name: "IndexAiRecommend",
+        component: () => import("@/views/ai/index.vue"),
+        meta: { title: "AI 推荐" },
+    },
 ];

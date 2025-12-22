@@ -36,7 +36,7 @@
     import rule from "@/utils/rule";
     import router from "@/router";
 
-    import { ref, reactive, computed } from "vue";
+    import { ref, reactive, computed, watch } from "vue";
     import { useRoute } from "vue-router";
     import { session } from "@/utils/utils";
     import { ElMessage, ElMessageBox } from "element-plus";
@@ -66,6 +66,20 @@
     const emit = defineEmits(["success"]);
     const formModel = ref();
     const loading = ref(false);
+    const applyQuote = () => {
+        const replyTo = route.query.replyTo ? `@${route.query.replyTo} ` : "";
+        const quote = route.query.quote ? `引用：${route.query.quote}` : "";
+        const content = `${replyTo}${quote}`.trim();
+        if (content && !form.huifuneirong) {
+            form.huifuneirong = content;
+        }
+    };
+
+    watch(
+        () => route.query,
+        () => applyQuote(),
+        { immediate: true }
+    );
     var submit = () => {
         return new Promise((resolve, reject) => {
             formModel.value

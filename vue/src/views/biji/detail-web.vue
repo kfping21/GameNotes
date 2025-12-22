@@ -32,8 +32,8 @@
                             标签：
                         </span>
                                             <span class="val">
-                             <e-select-view module="biaoqian" :value="map.biaoqian" select="id"
-                                            show="biaoqianmingcheng"></e-select-view>                        </span>
+                             <el-tag v-for="tag in parseTags(map.biaoqian)" :key="tag" style="margin-right: 5px">{{ tag }}</el-tag>
+                        </span>
                                         </div>
                                         <div>
                         <span class="name">
@@ -226,6 +226,7 @@ import { canGuanzhuInsert, canGuanzhuDelete, checkIsFollow } from "@/module/guan
 import {ref, reactive, watch, computed, unref} from 'vue';
 import {useRoute} from 'vue-router';
 import {session} from '@/utils/utils';
+import { pushHistory } from "@/utils/history";
 import {extend} from '@/utils/extend';
 import {useBijiFindById, canBijiFindById, canZhongcaoCreateForm, canZhongcaoInsert, canZhongcaoDelete} from '@/module';
 import {ElLoading, ElMessage, ElMessageBox} from 'element-plus';
@@ -247,6 +248,16 @@ const props = defineProps({
  * 获取详情页面的一行数据,当url参数id变更时，当url参数id变更时，自动更新map中的数据
  * @type {EBiji}
  */
+const parseTags = (biaoqian) => {
+    if (!biaoqian) return [];
+    return biaoqian.replace(/，/g, ',').split(/[,;|]/).map(t => t.trim()).filter(Boolean);
+};
+
+const getSummary = (html) => {
+    if (!html) return "";
+    return String(html).replace(/<[^>]+>/g, "").trim().slice(0, 80);
+};
+
 const map = useBijiFindById(props.id);
 const counts = reactive({
     zhongcao: 0,
@@ -270,6 +281,21 @@ watch(() => props.id, async (id) => {
     extend(map, res);
     loadCounts(id);
 }, { immediate: true });
+
+watch(
+    () => map.id,
+    (id) => {
+        if (!id) return;
+        pushHistory("biji", {
+            id,
+            title: map.bijimingcheng,
+            summary: getSummary(map.xiangqing),
+            cover: map.bijifengmian,
+            url: `/biji/detail?id=${id}`,
+        });
+    },
+    { immediate: true }
+);
 
 // 获取作者信息
 const authorInfo = ref({});

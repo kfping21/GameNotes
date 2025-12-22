@@ -31,8 +31,6 @@ public class Biji implements Serializable {
     private Integer guanlianyouxi;
     // 视频.
     private String shipin;
-    // 关注量.
-    private Integer guanzhuliang;
     // 种草度.
     private Integer zhongcaodu;
     // 详情.
@@ -108,14 +106,6 @@ public class Biji implements Serializable {
 
     public void setShipin(String shipin) {
         this.shipin = shipin == null ? "" : shipin.trim();
-    }
-
-    public Integer getGuanzhuliang() {
-        return guanzhuliang;
-    }
-
-    public void setGuanzhuliang(Integer guanzhuliang) {
-        this.guanzhuliang = guanzhuliang == null ? 0 : guanzhuliang;
     }
 
     public Integer getZhongcaodu() {

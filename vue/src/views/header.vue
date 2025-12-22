@@ -21,26 +21,35 @@
                 <li :class="{ current: isFullPathActive({ path: '/mall/products' }) }">
                     <router-link :to="{ path: '/mall/products' }" title="周边商城"> 周边商城 </router-link>
                 </li>
-                <li :class="{ current: isFullPathActive({ path: '/ai' }) }">
-                    <router-link :to="{ path: '/ai' }" title="AI 推荐"> AI 推荐 </router-link>
-                </li>
+
 
             </ul>
             <div class="right clearfix">
-
-                                <li v-if="$session.cx !='管理员'">
-
-                                <e-chat-button>消息</e-chat-button>
-                                </li>
-                
+                <div class="link message-link" v-if="$session.cx !='管理员'">
+                    <e-chat-button>消息</e-chat-button>
+                </div>
 
                 <template v-if="$session.username">
                     <div class="line"></div>
-                    <div class="link">
+                    <div class="link header-shortcut">
+                        <router-link class="action-btn" to="/history">浏览历史</router-link>
+                    </div>
+                    <div class="link header-shortcut">
+                        <router-link class="action-btn" to="/my/activity">我的收藏与点赞</router-link>
+                    </div>
+                    <div class="link header-shortcut">
+                        <router-link class="action-btn" to="/my/dashboard">数据看板</router-link>
+                    </div>
+                    <div class="link header-shortcut">
+                        <router-link class="action-btn" to="/my/growth">成长中心</router-link>
+                    </div>
+                    <div class="line"></div>
+                    <div class="link user-link">
                         <el-dropdown>
-                            <a href="javascript:;"> {{ $session.username }}，{{ $session.cx }} </a>
+                            <a href="javascript:;" class="action-btn user-trigger"> {{ $session.username }}，{{ $session.cx }} </a>
                             <template #dropdown>
                                 <el-dropdown-menu>
+                                    <el-dropdown-item @click="$router.push('/my/profile')">我的主页</el-dropdown-item>
                                     <el-dropdown-item @click="$router.push('/admin/sy')">个人中心</el-dropdown-item>
                                     <el-dropdown-item @click="logout">退出</el-dropdown-item>
                                 </el-dropdown-menu>
@@ -398,7 +407,39 @@
                     border: 1px solid var(--header-main-color);
                     border-radius: 10px;
                 }
-                
+
+                .action-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    font-size: 13px;
+                    padding: 7px 14px;
+                    border-radius: 14px;
+                    font-weight: 500;
+                    color: var(--header-main-color);
+                }
+            }
+
+            .message-link :deep(.el-button) {
+                height: 34px;
+                padding: 0 16px;
+                border-radius: 16px;
+                font-size: 13px;
+                border-color: var(--header-main-color);
+                color: var(--header-main-color);
+            }
+
+            .user-link .user-trigger {
+                font-size: 14px;
+                padding: 8px 18px;
+                border-radius: 18px;
+                color: #ffffff;
+                border: none;
+                background: linear-gradient(120deg, var(--header-main-color) 0%, #7aa7ff 100%);
+                box-shadow: 0 6px 14px rgba(71, 104, 230, 0.25);
+            }
+
+            .user-link .user-trigger:hover {
+                filter: brightness(1.03);
             }
 
             .search-box {

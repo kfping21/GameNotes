@@ -6,7 +6,9 @@
         <div class="back-link" @click="router.push('/topic')">
             <el-icon><ArrowLeft /></el-icon> 返回话题广场
         </div>
+        <el-button type="danger" plain size="small" @click="openReportTopic">举报话题</el-button>
       </div>
+
       <div class="topic-header">
         <h1>{{ topic.title }}</h1>
         <div class="topic-desc">{{ topic.intro }}</div>
@@ -25,7 +27,7 @@
           :class="{ active: activeTab === 'notes' }"
           @click="activeTab = 'notes'"
         >
-          笔记聚合
+          笔记集合
         </div>
         <div 
           class="tab-item" 
@@ -54,6 +56,9 @@
               <span class="time">{{ discussion.createdAt }}</span>
             </div>
             <div class="discussion-content">{{ discussion.content }}</div>
+            <div class="discussion-actions">
+              <el-button link type="danger" size="small" @click="openReportDiscussion(discussion)">举报</el-button>
+            </div>
           </div>
           <div v-if="discussions.length === 0" class="empty-tip">暂无讨论</div>
         </div>
@@ -97,9 +102,9 @@
               <span>{{ currentRoom.name }}</span>
             </div>
             <div class="message-list" ref="msgListRef">
-              <div v-for="msg in messages" :key="msg.id" class="message-item" :class="{ 'my-msg': msg.senderId == userStore.session.id }">
+              <div v-for="msg in messages" :key="msg.id" class="message-item" :class="{ 'my-msg': userStore.session && msg.senderId == userStore.session.id }">
                 <div class="msg-info">
-                    <span class="sender" v-if="msg.senderId != userStore.session.id">用户{{ msg.senderId }}</span>
+                    <span class="sender" v-if="!userStore.session || msg.senderId != userStore.session.id">用户{{ msg.senderId }}</span>
                     <span class="time">{{ msg.createdAt }}</span>
                 </div>
                 <div class="content">{{ msg.content }}</div>
@@ -122,7 +127,6 @@
       话题不存在或加载失败
     </div>
 
-    <!-- 创建房间弹窗 -->
     <el-dialog v-model="showCreateRoomDialog" title="创建聊天室" width="30%">
         <el-input v-model="newRoomName" placeholder="请输入聊天室名称" />
         <template #footer>
@@ -132,13 +136,15 @@
             </span>
         </template>
     </el-dialog>
+
+    <report-dialog v-model="reportVisible" :target="reportTarget" />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick, onBeforeUnmount } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { ArrowLeft } from '@element-plus/icons-vue';
+import { ref, onMounted, watch, nextTick, onBeforeUnmount } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { ArrowLeft } from "@element-plus/icons-vue";
 import { 
     getTopicById,
     getTopicDiscussions,
@@ -148,10 +154,12 @@ import {
     sendChatMessage, 
     createTopicDiscussion,
     createChatRoom
-} from '@/module/topic';
-import { useUserStore } from '@/stores';
-import { ElMessage } from 'element-plus';
+} from "@/module/topic";
+import { useUserStore } from "@/stores";
+import { ElMessage } from "element-plus";
 import config from "@/config";
+import ReportDialog from "@/components/report/ReportDialog.vue";
+import { pushHistory } from "@/utils/history";
 
 const route = useRoute();
 const router = useRouter();
@@ -162,56 +170,84 @@ const topic = ref(null);
 const discussions = ref([]);
 const notes = ref([]);
 const loading = ref(false);
-const activeTab = ref('discussions');
+const activeTab = ref("discussions");
+
+const reportVisible = ref(false);
+const reportTarget = ref({});
 
 const formatNoteContent = (content) => {
-    if (!content) return '';
-    // 去除HTML标签
-    const text = content.replace(/<[^>]+>/g, '');
-    // 截取前100个字符
-    return text.length > 100 ? text.slice(0, 100) + '...' : text;
+    if (!content) return "";
+    const text = content.replace(/<[^>]+>/g, "");
+    return text.length > 100 ? text.slice(0, 100) + "..." : text;
 };
 
-// Discussion related
-const newDiscussionContent = ref('');
+const newDiscussionContent = ref("");
 
-// Chat related
 const chatRooms = ref([]);
 const currentRoom = ref(null);
 const messages = ref([]);
-const inputMsg = ref('');
+const inputMsg = ref("");
 const msgListRef = ref(null);
 const showCreateRoomDialog = ref(false);
-const newRoomName = ref('');
+const newRoomName = ref("");
 let ws = null;
+
+const openReportTopic = () => {
+    reportTarget.value = {
+        type: "topic",
+        typeLabel: "话题",
+        id: topic.value?.id,
+        title: topic.value?.title,
+        content: topic.value?.intro,
+        url: `/topic/detail?id=${topic.value?.id}`,
+    };
+    reportVisible.value = true;
+};
+
+const openReportDiscussion = (discussion) => {
+    reportTarget.value = {
+        type: "discussion",
+        typeLabel: "讨论",
+        id: discussion.id,
+        title: topic.value?.title,
+        content: discussion.content,
+        url: `/topic/detail?id=${topic.value?.id}`,
+    };
+    reportVisible.value = true;
+};
 
 const fetchDetail = async () => {
   if (!topicId) return;
   loading.value = true;
   try {
-    // 并发请求独立接口
     const [topicRes, discussionRes, noteRes] = await Promise.all([
         getTopicById(topicId),
         getTopicDiscussions({ topicId: topicId, page: 1, pagesize: 10 }),
         getTopicNotes({ topicId: topicId, page: 1, pagesize: 10 })
     ]);
 
-    if (topicRes.code === 0 || topicRes.code === '0') {
+    if (topicRes.code === 0 || topicRes.code === "0") {
       topic.value = topicRes.data;
+      pushHistory("topic", {
+          id: topic.value.id,
+          title: topic.value.title,
+          summary: topic.value.intro,
+          url: `/topic/detail?id=${topic.value.id}`,
+      });
     } else {
-      ElMessage.error(topicRes.msg || '获取话题详情失败');
+      ElMessage.error(topicRes.msg || "获取话题详情失败");
     }
 
-    if (discussionRes.code === 0 || discussionRes.code === '0') {
+    if (discussionRes.code === 0 || discussionRes.code === "0") {
       discussions.value = discussionRes.data.lists || [];
     }
 
-    if (noteRes.code === 0 || noteRes.code === '0') {
+    if (noteRes.code === 0 || noteRes.code === "0") {
       notes.value = noteRes.data.lists || [];
     }
   } catch (error) {
     console.error(error);
-    ElMessage.error('网络错误');
+    ElMessage.error("网络错误");
   } finally {
     loading.value = false;
   }
@@ -219,49 +255,47 @@ const fetchDetail = async () => {
 
 const submitDiscussion = async () => {
     if (!newDiscussionContent.value.trim()) {
-        ElMessage.warning('请输入讨论内容');
+        ElMessage.warning("请输入讨论内容");
         return;
     }
-    if (!userStore.session.id) {
-        ElMessage.warning('请先登录');
+    if (!userStore.session || !userStore.session.id) {
+        ElMessage.warning("请先登录");
         return;
     }
     try {
         const res = await createTopicDiscussion({
             topicId: topicId,
             content: newDiscussionContent.value,
-            createdBy: userStore.session.id
+            createdBy: userStore.session.id,
         });
-        if (res.code === 0 || res.code === '0') {
-            ElMessage.success('发布成功');
-            newDiscussionContent.value = '';
-            // 刷新详情（或只刷新讨论列表）
+        if (res.code === 0 || res.code === "0") {
+            ElMessage.success("发布成功");
+            newDiscussionContent.value = "";
             fetchDetail();
         } else {
-            ElMessage.error(res.msg || '发布失败');
+            ElMessage.error(res.msg || "发布失败");
         }
     } catch (e) {
         console.error(e);
-        ElMessage.error('网络错误');
+        ElMessage.error("网络错误");
     }
 };
 
 const goToNote = (id) => {
     if (id) {
-        router.push({ path: '/biji/detail', query: { id } });
+        router.push({ path: "/biji/detail", query: { id } });
     }
 };
 
 const fetchChatRooms = async () => {
   try {
     const res = await getChatRooms();
-    if (res.code === 0 || res.code === '0') {
+    if (res.code === 0 || res.code === "0") {
       const allRooms = res.data || [];
-      // 过滤当前话题的聊天室并去重
-      const filtered = allRooms.filter(r => r.topicMainId == topicId);
+      const filtered = allRooms.filter((r) => r.topicMainId == topicId);
       const uniqueRooms = [];
       const seenIds = new Set();
-      const seenNames = new Set(); // 增加名称去重，防止用户重复创建同名房间
+      const seenNames = new Set();
       
       for (const room of filtered) {
         if (!seenIds.has(room.id) && !seenNames.has(room.name)) {
@@ -279,23 +313,23 @@ const fetchChatRooms = async () => {
 
 const handleCreateRoom = async () => {
     if (!newRoomName.value.trim()) return;
-    if (!userStore.session.id) {
-        ElMessage.warning('请先登录');
+    if (!userStore.session || !userStore.session.id) {
+        ElMessage.warning("请先登录");
         return;
     }
     try {
         const res = await createChatRoom({
             topicMainId: topicId,
             ownerId: userStore.session.id,
-            name: newRoomName.value
+            name: newRoomName.value,
         });
-        if (res.code === 0 || res.code === '0') {
-            ElMessage.success('创建成功');
+        if (res.code === 0 || res.code === "0") {
+            ElMessage.success("创建成功");
             showCreateRoomDialog.value = false;
-            newRoomName.value = '';
+            newRoomName.value = "";
             fetchChatRooms();
         } else {
-            ElMessage.error(res.msg || '创建失败');
+            ElMessage.error(res.msg || "创建失败");
         }
     } catch (e) {
         console.error(e);
@@ -304,25 +338,18 @@ const handleCreateRoom = async () => {
 
 const initWebSocket = () => {
     if (ws) return;
-    if (!userStore.session.id) return;
+    if (!userStore.session || !userStore.session.id) return;
 
-    // 假设 config.service_url 是 http://localhost:8080
-    // 需要替换 http 为 ws
-    let wsUrl = config.service_url.replace('http', 'ws');
-    // 如果 service_url 只有路径，需要补全 host
-    if (wsUrl.startsWith('/')) {
+    let wsUrl = config.service_url.replace("http", "ws");
+    if (wsUrl.startsWith("/")) {
         wsUrl = `ws://${window.location.host}${wsUrl}`;
     }
-    // 去掉末尾斜杠
-    if (wsUrl.endsWith('/')) wsUrl = wsUrl.slice(0, -1);
+    if (wsUrl.endsWith("/")) wsUrl = wsUrl.slice(0, -1);
     
     wsUrl = `${wsUrl}/websocket/${userStore.session.id}`;
-    
     ws = new WebSocket(wsUrl);
     
     ws.onopen = () => {
-        console.log('WebSocket connected');
-        // 如果当前已经在房间，重新加入
         if (currentRoom.value) {
             joinRoom(currentRoom.value.id);
         }
@@ -331,37 +358,34 @@ const initWebSocket = () => {
     ws.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-            // 处理接收到的消息
-            // 假设后端广播的消息格式是 { ...messageObject }
-            // 或者 { type: 'chat', data: messageObject }
-            // 这里简单处理直接追加
             if (currentRoom.value && data.roomId == currentRoom.value.id) {
                 messages.value.push(data);
                 scrollToBottom();
             }
         } catch (e) {
-            console.error('WS message parse error', e);
+            console.error("WS message parse error", e);
         }
     };
     
     ws.onclose = () => {
-        console.log('WebSocket closed');
         ws = null;
     };
 };
 
 const joinRoom = (roomId) => {
     if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-            cmd: 'joinRoom',
-            data: { roomId: roomId }
-        }));
+        ws.send(
+            JSON.stringify({
+                cmd: "joinRoom",
+                data: { roomId: roomId },
+            })
+        );
     }
 };
 
 const enterRoom = async (room) => {
-  if (!userStore.session.id) {
-      ElMessage.warning('请先登录后进入聊天室');
+  if (!userStore.session || !userStore.session.id) {
+      ElMessage.warning("请先登录后进入聊天室");
       return;
   }
   currentRoom.value = room;
@@ -376,13 +400,12 @@ const enterRoom = async (room) => {
 
 const leaveRoom = () => {
     currentRoom.value = null;
-    // 可选：发送 leaveRoom 命令
 };
 
 const fetchMessages = async (roomId) => {
   try {
     const res = await getChatMessages(roomId);
-    if (res.code === 0 || res.code === '0') {
+    if (res.code === 0 || res.code === "0") {
       messages.value = res.data || [];
       scrollToBottom();
     }
@@ -393,8 +416,8 @@ const fetchMessages = async (roomId) => {
 
 const sendMessage = async () => {
   if (!inputMsg.value.trim()) return;
-  if (!userStore.session.id) {
-      ElMessage.warning('请先登录');
+  if (!userStore.session || !userStore.session.id) {
+      ElMessage.warning("请先登录");
       return;
   }
   
@@ -402,27 +425,25 @@ const sendMessage = async () => {
     const res = await sendChatMessage({
       roomId: currentRoom.value.id,
       senderId: userStore.session.id,
-      content: inputMsg.value
+      content: inputMsg.value,
     });
     
-    if (res.code === 0 || res.code === '0') {
-      // 成功后，如果 WS 正常，会收到广播；
-      // 如果担心延迟，也可以先本地 push
+    if (res.code === 0 || res.code === "0") {
       messages.value.push({
-          id: Date.now(), // 临时ID
+          id: Date.now(),
           roomId: currentRoom.value.id,
           senderId: userStore.session.id,
           content: inputMsg.value,
-          createdAt: new Date().toLocaleString()
-      }); 
+          createdAt: new Date().toLocaleString(),
+      });
       scrollToBottom();
-      inputMsg.value = '';
+      inputMsg.value = "";
     } else {
-      ElMessage.error(res.msg || '发送失败');
+      ElMessage.error(res.msg || "发送失败");
     }
   } catch (error) {
     console.error(error);
-    ElMessage.error('发送失败');
+    ElMessage.error("发送失败");
   }
 };
 
@@ -435,14 +456,20 @@ const scrollToBottom = () => {
 };
 
 watch(activeTab, (newVal) => {
-  if (newVal === 'chat') {
-    // 每次切换到聊天室都刷新列表，确保看到最新创建的
+  if (newVal === "chat") {
     fetchChatRooms();
   }
 });
 
 onMounted(() => {
   fetchDetail();
+});
+
+onBeforeUnmount(() => {
+    if (ws) {
+        ws.close();
+        ws = null;
+    }
 });
 </script>
 
@@ -454,6 +481,11 @@ onMounted(() => {
 
   .nav-bar {
       margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+
       .back-link {
           display: inline-flex;
           align-items: center;
@@ -467,14 +499,14 @@ onMounted(() => {
           }
 
           &:hover {
-              color: #409eff;
+              color: var(--theme-primary-color);
           }
       }
   }
 
   .topic-header {
     margin-bottom: 20px;
-    background: #fff;
+    background: var(--theme-surface-color);
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 12px 0 rgba(0,0,0,0.05);
@@ -488,9 +520,9 @@ onMounted(() => {
 
   .topic-tabs {
     display: flex;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--theme-border-color);
     margin-bottom: 20px;
-    background: #fff;
+    background: var(--theme-surface-color);
     padding: 0 20px;
     border-radius: 8px 8px 0 0;
     
@@ -499,34 +531,35 @@ onMounted(() => {
       cursor: pointer;
       font-weight: 500;
       &.active {
-        color: #409eff;
-        border-bottom: 2px solid #409eff;
+        color: var(--theme-primary-color);
+        border-bottom: 2px solid var(--theme-primary-color);
       }
       &:hover {
-        color: #409eff;
+        color: var(--theme-primary-color);
       }
     }
   }
 
   .tab-content {
-    background: #fff;
+    background: var(--theme-surface-color);
     padding: 20px;
     min-height: 400px;
     border-radius: 0 0 8px 8px;
   }
 
-  .sub-item, .note-item, .discussion-item {
+  .note-item,
+  .discussion-item {
     padding: 15px;
     border-bottom: 1px solid #f0f0f0;
     &:last-child {
       border-bottom: none;
     }
-    h4, .note-title {
+    .note-title {
       margin: 0 0 5px 0;
       font-size: 16px;
       font-weight: bold;
     }
-    p, .note-content {
+    .note-content {
       margin: 0;
       color: #666;
       font-size: 14px;
@@ -554,7 +587,7 @@ onMounted(() => {
   }
 
   .discussion-item {
-    background: #fff;
+    background: var(--theme-surface-color);
     transition: background-color 0.3s;
     &:hover {
       background-color: #fafafa;
@@ -567,7 +600,7 @@ onMounted(() => {
       color: #999;
       
       .user {
-        color: #409eff;
+        color: var(--theme-primary-color);
         font-weight: 500;
       }
     }
@@ -575,19 +608,22 @@ onMounted(() => {
       font-size: 14px;
       line-height: 1.6;
       color: #333;
-      white-space: pre-wrap; /* 保留换行 */
+      white-space: pre-wrap;
+    }
+    .discussion-actions {
+      margin-top: 8px;
     }
   }
 
   .room-list {
     .room-item {
       padding: 15px;
-      border: 1px solid #eee;
+      border: 1px solid var(--theme-border-color);
       margin-bottom: 10px;
       cursor: pointer;
       border-radius: 4px;
       &:hover {
-        background-color: #f5f7fa;
+        background-color: var(--theme-surface-muted);
       }
     }
   }
@@ -599,11 +635,11 @@ onMounted(() => {
     
     .room-header {
       padding-bottom: 10px;
-      border-bottom: 1px solid #eee;
+      border-bottom: 1px solid var(--theme-border-color);
       margin-bottom: 10px;
       .back-btn {
         cursor: pointer;
-        color: #409eff;
+        color: var(--theme-primary-color);
         margin-right: 10px;
       }
     }
@@ -612,7 +648,7 @@ onMounted(() => {
       flex: 1;
       overflow-y: auto;
       padding: 10px;
-      background: #f9f9f9;
+      background: var(--theme-surface-muted);
       border-radius: 4px;
       margin-bottom: 10px;
       
@@ -636,13 +672,13 @@ onMounted(() => {
       }
       .send-btn {
         padding: 0 20px;
-        background: #409eff;
+        background: var(--theme-primary-color);
         color: #fff;
         border: none;
         border-radius: 4px;
         cursor: pointer;
         &:hover {
-          background: #66b1ff;
+          background: var(--theme-primary-hover-color);
         }
       }
     }

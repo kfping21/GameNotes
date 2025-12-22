@@ -35,7 +35,9 @@
                             <el-rate v-model="v.pingfen" disabled show-score text-color="#ff9900" score-template="{value}"> </el-rate>
                         </span>
                         <span class="comment-time">{{ v.addtime.substr(0, 10) }}</span>
-                        <router-link v-if="isReply" :to="'/pinglunhuifu/add?id=' + v.id">回复</router-link>
+                        <router-link v-if="isReply" :to="buildReplyLink(v)">回复</router-link>
+                        <router-link v-if="isReply" class="comment-quote-link" :to="buildQuoteLink(v)">引用回复</router-link>
+                        <el-button class="comment-report-btn" link @click="openReport(v)">举报</el-button>
                     </p>
                     <div class="comment-content J_CommentContent">{{ v.pinglunneirong }}</div>
 
@@ -59,6 +61,7 @@
                 </div>
             </div>
         </div>
+    <report-dialog v-model="reportVisible" :target="reportTarget" />
     </div>
 </template>
 <style type="text/scss" scoped lang="scss">
@@ -85,23 +88,32 @@
             width: 100%;
             height: 100%;
         }
-        .comment-user {
-            height: 32px;
-            line-height: 32px;
-            font-size: 12px;
-            > span {
-                display: inline-block;
-            }
-            .comment-username {
-                font-weight: 600;
-                color: rgb(55, 155, 233);
-            }
-            .comment-time {
-                color: rgb(153, 153, 153);
-                display: inline-block;
-                margin-left: 12px;
-            }
+    .comment-user {
+        height: 32px;
+        line-height: 32px;
+        font-size: 12px;
+        > span {
+            display: inline-block;
         }
+        .comment-username {
+            font-weight: 600;
+            color: rgb(55, 155, 233);
+        }
+        .comment-time {
+            color: rgb(153, 153, 153);
+            display: inline-block;
+            margin-left: 12px;
+        }
+    }
+    .comment-report-btn {
+        font-size: 12px;
+        margin-left: 8px;
+    }
+    .comment-quote-link {
+        font-size: 12px;
+        margin-left: 8px;
+        color: var(--theme-primary-color);
+    }
     }
     .comment-content {
         font-size: 14px;
@@ -117,12 +129,13 @@
 <script>
     import { extend, isFunction } from "@/utils/extend";
     import ReplyList from "@/components/comments/replyList";
+    import ReportDialog from "@/components/report/ReportDialog.vue";
     import defaultHeadimg from "./asset/default.gif";
     import { canPinglunInsert } from "@/module";
 
     export default {
         name: "e-comments",
-        components: { ReplyList },
+        components: { ReplyList, ReportDialog },
         data() {
             return {
                 comment: {
@@ -134,6 +147,8 @@
                 },
                 isLoading: false,
                 defaultHeadimg: defaultHeadimg,
+                reportVisible: false,
+                reportTarget: {},
             };
         },
         props: {
@@ -152,6 +167,33 @@
         watch: {},
         computed: {},
         methods: {
+            buildReplyLink(row) {
+                return { path: "/pinglunhuifu/add", query: { id: row.id } };
+            },
+            buildQuoteLink(row) {
+                const raw = row?.pinglunneirong ? String(row.pinglunneirong) : "";
+                const quote = raw.replace(/\s+/g, " ").trim().slice(0, 60);
+                const replyTo = row?.[this.name] || row?.pinglunren || "";
+                return {
+                    path: "/pinglunhuifu/add",
+                    query: {
+                        id: row.id,
+                        quote,
+                        replyTo,
+                    },
+                };
+            },
+            openReport(row) {
+                this.reportTarget = {
+                    type: "comment",
+                    typeLabel: "评论",
+                    id: row.id,
+                    title: row.biaoti,
+                    content: row.pinglunneirong,
+                    url: window.location.href,
+                };
+                this.reportVisible = true;
+            },
             submitComment() {
                 this.$refs.form.validate().then(() => {
                     var comment = extend(true, {}, this.comment);

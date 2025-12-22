@@ -92,6 +92,36 @@ export default [
         meta: { title: "话题广场" },
     },
     {
+        path: "history",
+        name: "IndexHistory",
+        component: () => import("@/views/history/index.vue"),
+        meta: { title: "浏览历史" },
+    },
+    {
+        path: "my/activity",
+        name: "IndexMyActivity",
+        component: () => import("@/views/my/activity.vue"),
+        meta: { title: "我的收藏点赞", authLogin: true, msg: true },
+    },
+    {
+        path: "my/dashboard",
+        name: "IndexMyDashboard",
+        component: () => import("@/views/my/dashboard.vue"),
+        meta: { title: "数据看板", authLogin: true, msg: true },
+    },
+    {
+        path: "my/growth",
+        name: "IndexMyGrowth",
+        component: () => import("@/views/my/growth.vue"),
+        meta: { title: "成长中心", authLogin: true, msg: true },
+    },
+    {
+        path: "my/profile",
+        name: "IndexMyProfile",
+        component: () => import("@/views/my/profile.vue"),
+        meta: { title: "我的主页", authLogin: true, msg: true },
+    },
+    {
         path: "topic/detail",
         name: "IndexTopicDetail",
         props: (route) => ({ id: route.query.id }),

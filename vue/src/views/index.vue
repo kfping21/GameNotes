@@ -19,7 +19,7 @@
                 <el-col :md="18" :sm="24">
                     <div class="main-content">
                         <el-tabs v-model="activeTab" class="note-tabs">
-                            <el-tab-pane label="推荐笔记" name="recommend">
+                            <el-tab-pane label="推荐" name="recommend">
                                 <div class="note-list">
                                     <div v-for="r in bijilist" :key="r.id" class="note-item">
                                         <div class="note-cover">
@@ -31,7 +31,7 @@
                                             <router-link :to="{ path: '/biji/detail', query: { id: r.id } }" class="note-title" v-html="$substr(r.bijimingcheng, 30)"></router-link>
                                             <div class="note-desc" v-html="$substr(r.xiangqing, 60)"></div>
                                             <div class="note-meta">
-                                                <span class="author"><i class="fa fa-user"></i> {{ r.tianjiaren }}</span>
+                                                <span class="author"><i class="fa fa-user"></i> {{ r.authorName || r.tianjiaren }}</span>
                                                 <span class="time">{{ r.addtime }}</span>
                                             </div>
                                         </div>
@@ -39,7 +39,7 @@
                                     <el-empty v-if="bijilist.length === 0" description="暂无推荐笔记"></el-empty>
                                 </div>
                             </el-tab-pane>
-                            <el-tab-pane label="关注动态" name="following">
+                            <el-tab-pane label="关注" name="following">
                                 <div class="note-list">
                                     <div v-if="bijilist1.length === 0" class="empty-tip">
                                         {{ $session.username ? '暂无关注用户的动态' : '登录后查看关注动态' }}
@@ -54,14 +54,14 @@
                                             <router-link :to="{ path: '/biji/detail', query: { id: r.id } }" class="note-title" v-html="$substr(r.bijimingcheng, 30)"></router-link>
                                             <div class="note-desc" v-html="$substr(r.xiangqing, 60)"></div>
                                             <div class="note-meta">
-                                                <span class="author"><i class="fa fa-user"></i> {{ r.tianjiaren }}</span>
+                                                <span class="author"><i class="fa fa-user"></i> {{ r.authorName || r.tianjiaren }}</span>
                                                 <span class="time">{{ r.addtime }}</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </el-tab-pane>
-                            <el-tab-pane label="热门笔记" name="hot">
+                            <el-tab-pane label="热门" name="hot">
                                 <div class="note-list">
                                     <div v-for="r in bijilist2" :key="r.id" class="note-item">
                                         <div class="note-cover">
@@ -73,8 +73,8 @@
                                             <router-link :to="{ path: '/biji/detail', query: { id: r.id } }" class="note-title" v-html="$substr(r.bijimingcheng, 30)"></router-link>
                                             <div class="note-desc" v-html="$substr(r.xiangqing, 60)"></div>
                                             <div class="note-meta">
-                                                <span class="likes"><i class="fa fa-heart"></i> {{ r.zhongcaodu }}</span>
-                                                <span class="author"><i class="fa fa-user"></i> {{ r.tianjiaren }}</span>
+                                                <span class="likes"><i class="fa fa-heart"></i> {{ r.zhongcaoCount || 0 }}</span>
+                                                <span class="author"><i class="fa fa-user"></i> {{ r.authorName || r.tianjiaren }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -146,13 +146,6 @@
             </el-row>
         </e-container>
 
-        <!-- AI 悬浮按钮 -->
-        <div class="ai-float-btn" @click="$router.push('/ai')">
-            <div class="ai-icon">
-                <i class="fa fa-magic"></i>
-            </div>
-            <div class="ai-text">AI助手</div>
-        </div>
     </div>
 </template>
 
@@ -253,23 +246,109 @@ const getProductImage = (item) => {
 // 获取用户个性化推荐的笔记列表
 const bijilist = ref([]);
 
+const fetchAuthorNames = async (list) => {
+    if (!list || list.length === 0) return;
+    const ids = [...new Set(list.map(item => item.tianjiaren).filter(id => id))];
+    if (ids.length === 0) return;
+    
+    // Fetch users
+    const users = await DB.name("yonghu").where("zhanghao", "in", ids).select();
+    const userMap = {};
+    users.forEach(u => {
+        userMap[u.zhanghao] = u.mingcheng;
+    });
+    
+    list.forEach(item => {
+        if (userMap[item.tianjiaren]) {
+            item.authorName = userMap[item.tianjiaren];
+        }
+    });
+};
+
+const fetchZhongcaoCounts = async (list) => {
+    if (!list || list.length === 0) return;
+    const ids = list.map(item => item.id);
+    if (ids.length === 0) return;
+
+    try {
+        // Fetch zhongcao counts from zhongcao table
+        const counts = await DB.name("zhongcao")
+            .field("bijiid, count(*) as count")
+            .where("bijiid", "in", ids)
+            .group("bijiid")
+            .select();
+        
+        const countMap = {};
+        counts.forEach(c => {
+            countMap[c.bijiid] = c.count;
+        });
+
+        list.forEach(item => {
+            item.zhongcaoCount = countMap[item.id] || 0;
+        });
+    } catch (e) {
+        console.error("Failed to fetch zhongcao counts", e);
+    }
+};
+
+const fetchLikeCounts = async (list) => {
+    if (!list || list.length === 0) return;
+    const ids = list.map(item => item.id);
+    if (ids.length === 0) return;
+
+    try {
+        // Fetch like counts from dianzan table
+        const counts = await DB.name("dianzan")
+            .field("biaoid, count(*) as count")
+            .where("biao", "biji")
+            .where("biaoid", "in", ids)
+            .group("biaoid")
+            .select();
+        
+        const countMap = {};
+        counts.forEach(c => {
+            countMap[c.biaoid] = c.count;
+        });
+
+        list.forEach(item => {
+            item.likeCount = countMap[item.id] || 0;
+        });
+    } catch (e) {
+        console.error("Failed to fetch like counts", e);
+    }
+};
+
 // 调用后端推荐接口获取个性化推荐笔记
 const getRecommendData = async () => {
     try {
         const res = await http.get('/api/biji/recommendByUserTagsAndGames');
         if (res.code === 0) {
             bijilist.value = res.data.list || [];
+            await fetchAuthorNames(bijilist.value);
+            await fetchLikeCounts(bijilist.value);
         } else {
             // 如果推荐获取失败，回退到默认的笔记列表
-            DB.name("biji").where("issh", "是").order("id desc").select().then(data => {
-                bijilist.value = data;
-            });
+            const data = await DB.name("biji")
+                .alias("a")
+                .joinLeft("yonghu b", "a.tianjiaren=b.zhanghao")
+                .field("a.*,b.mingcheng as authorName")
+                .where("a.issh", "是")
+                .order("a.id desc")
+                .select();
+            bijilist.value = data;
+            await fetchLikeCounts(bijilist.value);
         }
     } catch (error) {
         // 如果调用失败，回退到默认的笔记列表
-        DB.name("biji").where("issh", "是").order("id desc").select().then(data => {
-            bijilist.value = data;
-        });
+        const data = await DB.name("biji")
+            .alias("a")
+            .joinLeft("yonghu b", "a.tianjiaren=b.zhanghao")
+            .field("a.*,b.mingcheng as authorName")
+            .where("a.issh", "是")
+            .order("a.id desc")
+            .select();
+        bijilist.value = data;
+        await fetchLikeCounts(bijilist.value);
     }
 };
 
@@ -297,11 +376,16 @@ const getFollowData = async () => {
             if (followList.length > 0) {
                 const followees = followList.map(r => r.followee);
                 // 获取这些用户的笔记
-                bijilist1.value = await DB.name("biji")
-                    .where("issh", "是")
-                    .where("tianjiaren", "in", followees)
-                    .order("id desc")
+                const data = await DB.name("biji")
+                    .alias("a")
+                    .joinLeft("yonghu b", "a.tianjiaren=b.zhanghao")
+                    .field("a.*,b.mingcheng as authorName")
+                    .where("a.issh", "是")
+                    .where("a.tianjiaren", "in", followees)
+                    .order("a.id desc")
                     .select();
+                bijilist1.value = data;
+                await fetchLikeCounts(bijilist1.value);
             } else {
                 bijilist1.value = [];
             }
@@ -318,11 +402,25 @@ const getFollowData = async () => {
  * 定义响应式变量bijilist2,并获取数据笔记模块的数据
  * @type {UnwrapNestedRefs<EBiji[]>}
  */
-const bijilist2 = DB.name("biji").where("issh", "是").order("zhongcaodu desc").selectRef();
+const bijilist2 = ref([]);
+const loadHotNotes = async () => {
+    const data = await DB.name("biji")
+        .alias("a")
+        .joinLeft("yonghu b", "a.tianjiaren=b.zhanghao")
+        .field("a.*,b.mingcheng as authorName")
+        .where("a.issh", "是")
+        .order("a.zhongcaodu desc")
+        .select();
+    bijilist2.value = data;
+    await fetchZhongcaoCounts(bijilist2.value);
+    // Re-sort based on real-time counts to ensure display matches sorting
+    bijilist2.value.sort((a, b) => (b.zhongcaoCount || 0) - (a.zhongcaoCount || 0));
+};
 
 onMounted(() => {
     getRecommendData();
     getFollowData();
+    loadHotNotes();
     loadTopics();
     loadProducts();
 });
@@ -563,36 +661,4 @@ onMounted(() => {
     }
 }
 
-.ai-float-btn {
-    position: fixed;
-    bottom: 100px;
-    right: 30px;
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(135deg, #409eff, #36cfc9);
-    border-radius: 50%;
-    box-shadow: 0 4px 15px rgba(64, 158, 255, 0.4);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    z-index: 999;
-    transition: all 0.3s;
-    color: #fff;
-    
-    &:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 6px 20px rgba(64, 158, 255, 0.6);
-    }
-    
-    .ai-icon {
-        font-size: 24px;
-        margin-bottom: 2px;
-    }
-    
-    .ai-text {
-        font-size: 10px;
-    }
-}
 </style>

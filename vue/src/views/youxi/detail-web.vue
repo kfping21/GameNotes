@@ -189,6 +189,7 @@
     import { ref, reactive, watch, computed } from "vue";
     import { useRoute } from "vue-router";
     import { session } from "@/utils/utils";
+    import { pushHistory } from "@/utils/history";
     import { extend } from "@/utils/extend";
     import router from "@/router";
     import { ElMessage } from "element-plus";
@@ -226,6 +227,11 @@
         meta: [],
         pairs: [],
     });
+
+    const getSummary = (html) => {
+        if (!html) return "";
+        return String(html).replace(/<[^>]+>/g, "").trim().slice(0, 80);
+    };
 
     const gameIntro = computed(() => {
         return map.intro || map.jianjie || map.summary || "暂无简介";
@@ -342,7 +348,15 @@
             equipment.value = (data.equipment || []).map(normalizeEquipment);
             characters.value = (data.characters || []).map(normalizeCharacter);
             peripheralsUrl.value = data.peripheralsUrl || "";
-            
+
+            pushHistory("youxi", {
+                id: map.id || id,
+                title: map.youximingcheng || data.youxi?.youximingcheng,
+                summary: getSummary(map.intro || map.xiangqing),
+                cover: map.youxitupian || data.youxi?.youxitupian,
+                url: `/youxi/detail?id=${id}`,
+            });
+
             // 加载周边商品
             loadProducts(id);
         } else {
@@ -365,12 +379,7 @@
 
     const goNote = (row) => {
         const id = row.id;
-        const url = row.url;
-        if (url) {
-            window.location.href = url;
-        } else {
-            router.push({ path: '/biji/detail', query: { id } });
-        }
+        router.push({ path: '/biji/detail', query: { id } });
     };
     const goPeripherals = () => {
         // 跳转到周边商城列表页（显示所有周边）

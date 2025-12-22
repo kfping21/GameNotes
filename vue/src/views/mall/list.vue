@@ -1,58 +1,110 @@
 <template>
     <div class="views-mall-list">
         <e-container>
-            <div class="title-modelbox-widget1">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-                    <h3 class="section-title" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0;">周边商城</h3>
+            <div class="mall-header">
+                <div class="header-content">
+                    <h3 class="page-title">周边商城</h3>
+                    <p class="page-desc">精选优质周边，打造专属生活方式</p>
                 </div>
-                <div class="sidebar-widget-body">
-                    <div class="floor_goods_wrap clearfix">
-                        <div style="margin-bottom: 20px">
-                            <form action="javascript:;" @submit="searchSubmit" class="form-search">
-                                <table class="jd-search">
-                                    <tbody>
-                                        <tr>
-                                            <td class="label">关键词</td>
-                                            <td>
-                                                <div style="display: flex; gap: 10px;">
-                                                    <el-input type="text" v-model="search.keyword" placeholder="请输入商品名称或关键词" style="width: 300px;" clearable @clear="searchSubmit" @keyup.enter="searchSubmit"></el-input>
-                                                    <el-button type="success" @click="searchSubmit">搜索</el-button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="label">分类</td>
-                                            <td>
-                                                <p class="search-radio">
-                                                    <a href="javascript:;" @click="selectCategory('')" :class="{ active: !search.categoryId }">全部</a>
-                                                    <a href="javascript:;" v-for="c in categories" :key="c.id" @click="selectCategory(c.id)" :class="{ active: search.categoryId == c.id }">{{ c.name }}</a>
-                                                </p>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </form>
-                        </div>
-                        
-                        <el-empty v-if="!lists.length" description="暂无商品"></el-empty>
-                        <el-row v-else :gutter="20">
-                            <el-col :md="6" :sm="12" :xs="24" v-for="r in lists" :key="r.id">
-                                <div class="floor_goods_wrap_li">
-                                    <div class="floor_goods_wrap_b">
-                                        <router-link :to="{ path: '/mall/detail', query: { id: r.id } }" class="floor_goods_img">
-                                                <e-img :src="getProductImage(r)" pb="100"></e-img>
-                                        </router-link>
-                                        <router-link :to="{ path: '/mall/detail', query: { id: r.id } }" class="floor_goods_tit">{{ r.name }}</router-link>
-                                        <div class="floor_goods_txt" style="color: #f56c6c; font-weight: bold;">￥{{ r.price }}</div>
-                                    </div>
-                                </div>
-                            </el-col>
-                        </el-row>
+                <div class="header-actions">
+                    <el-button type="primary" plain round @click="$router.push('/mall/cart')">
+                        <el-icon class="el-icon--left"><ShoppingCart /></el-icon>
+                        购物车
+                    </el-button>
+                    <el-button type="warning" plain round @click="$router.push('/mall/order/list')">
+                        <el-icon class="el-icon--left"><List /></el-icon>
+                        我的订单
+                    </el-button>
+                </div>
+            </div>
+            
+            <div class="filter-container">
+                <div class="filter-search">
+                    <el-autocomplete
+                        v-model="search.keyword" 
+                        :fetch-suggestions="querySearch"
+                        placeholder="搜索心仪的商品..." 
+                        class="custom-search-input"
+                        clearable 
+                        @select="handleSelect"
+                        @clear="searchSubmit" 
+                        @keyup.enter="searchSubmit"
+                        style="width: 100%"
+                    >
+                        <template #prefix>
+                            <i class="fa fa-search"></i>
+                        </template>
+                        <template #default="{ item }">
+                            <div class="suggestion-item">
+                                <span v-if="item.type === 'history'" style="color: #909399; margin-right: 8px;"><i class="fa fa-history"></i></span>
+                                <span v-else style="color: #f56c6c; margin-right: 8px;"><i class="fa fa-fire"></i></span>
+                                <span>{{ item.value }}</span>
+                            </div>
+                        </template>
+                        <template #append>
+                            <el-button @click="searchSubmit">搜索</el-button>
+                        </template>
+                    </el-autocomplete>
+                </div>
+                
+                <div class="filter-categories">
+                    <span class="cat-label">分类：</span>
+                    <div class="cat-list">
+                        <a href="javascript:;" 
+                           @click="selectCategory('')" 
+                           class="cat-item" 
+                           :class="{ active: !search.categoryId }">
+                           全部
+                        </a>
+                        <a href="javascript:;" 
+                           v-for="c in categories" 
+                           :key="c.id" 
+                           @click="selectCategory(c.id)" 
+                           class="cat-item" 
+                           :class="{ active: search.categoryId == c.id }">
+                           {{ c.name }}
+                        </a>
                     </div>
+                </div>
+            </div>
 
-                    <div style="margin-top: 10px; text-align: center">
-                        <el-pagination @current-change="loadList" :page-sizes="[12, 24, 36, 48, 60]" v-model:current-page="search.page" v-model:page-size="search.size" @size-change="loadList" layout="total, sizes, prev, pager, next" :total="totalCount"> </el-pagination>
+            <div class="goods-section">
+                <el-empty v-if="!lists.length" description="暂无商品" :image-size="200"></el-empty>
+                
+                <div v-else class="goods-grid">
+                    <div class="goods-card-wrapper" v-for="r in lists" :key="r.id">
+                        <div class="goods-card" @click="$router.push({ path: '/mall/detail', query: { id: r.id } })">
+                            <div class="card-image">
+                                <e-img :src="getProductImage(r)" class="product-img"></e-img>
+                                <div class="hover-overlay">
+                                    <span class="view-btn">查看详情</span>
+                                </div>
+                            </div>
+                            <div class="card-info">
+                                <h4 class="goods-title" :title="r.name">{{ r.name }}</h4>
+                                <div class="goods-meta">
+                                    <div class="price-box">
+                                        <span class="currency">￥</span>
+                                        <span class="amount">{{ r.price }}</span>
+                                    </div>
+                                    <span class="sales-info" v-if="r.sales">销量 {{ r.sales }}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                </div>
+
+                <div class="pagination-wrapper">
+                    <el-pagination 
+                        background
+                        @current-change="loadList" 
+                        :page-sizes="[12, 24, 36, 48]" 
+                        v-model:current-page="search.page" 
+                        v-model:page-size="search.size" 
+                        @size-change="loadList" 
+                        layout="prev, pager, next, sizes, jumper" 
+                        :total="totalCount"> 
+                    </el-pagination>
                 </div>
             </div>
         </e-container>
@@ -65,6 +117,7 @@ import DB from "@/utils/db";
 import { ref, reactive, watch, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { extend } from "@/utils/extend";
+import { ShoppingCart, List } from '@element-plus/icons-vue';
 
 const route = useRoute();
 const search = reactive({
@@ -78,6 +131,57 @@ const search = reactive({
 const lists = ref([]);
 const totalCount = ref(0);
 const categories = ref([]);
+
+const getRandomHotSearches = () => {
+    const pool = ['手办', 'T恤', '徽章', '抱枕', '钥匙扣', '鼠标垫', '海报', '公仔', '模型', '卡牌'];
+    return pool.sort(() => 0.5 - Math.random()).slice(0, 5).map(item => ({ value: item, type: 'hot' }));
+};
+
+const getHistory = () => {
+    try {
+        const history = JSON.parse(localStorage.getItem('mall_search_history') || '[]');
+        return history.map(item => ({ value: item, type: 'history' }));
+    } catch (e) {
+        return [];
+    }
+};
+
+const saveHistory = (keyword) => {
+    if (!keyword) return;
+    try {
+        let history = JSON.parse(localStorage.getItem('mall_search_history') || '[]');
+        history = history.filter(h => h !== keyword);
+        history.unshift(keyword);
+        if (history.length > 10) history = history.slice(0, 10);
+        localStorage.setItem('mall_search_history', JSON.stringify(history));
+    } catch (e) {
+        console.error(e);
+    }
+};
+
+const querySearch = (queryString, cb) => {
+    let results = [];
+    if (!queryString) {
+        const history = getHistory();
+        if (history.length > 0) {
+            results = history;
+        } else {
+            results = getRandomHotSearches();
+        }
+    } else {
+        const history = getHistory();
+        results = history.filter(item => item.value.toLowerCase().includes(queryString.toLowerCase()));
+        if (results.length === 0) {
+             results = getRandomHotSearches().filter(item => item.value.toLowerCase().includes(queryString.toLowerCase()));
+        }
+    }
+    cb(results);
+};
+
+const handleSelect = (item) => {
+    search.keyword = item.value;
+    searchSubmit();
+};
 
 // 初始化参数
 extend(search, route.query);
@@ -152,6 +256,7 @@ const loadList = async () => {
 };
 
 const searchSubmit = () => {
+    saveHistory(search.keyword);
     search.page = 1;
     loadList();
 };
@@ -193,68 +298,298 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
-.floor_goods_wrap_li {
-    margin-bottom: 20px;
+<style scoped lang="scss">
+.views-mall-list {
+    padding-bottom: 40px;
+    background-color: var(--theme-background-color, #f6f7fb);
+    min-height: 100vh;
+}
+
+.mall-header {
+    padding: 40px 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    .header-content {
+        text-align: left;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 15px;
+    }
+    
+    .page-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--theme-color, #2b2d31);
+        margin: 0 0 10px;
+        letter-spacing: 1px;
+    }
+    
+    .page-desc {
+        font-size: 14px;
+        color: #888;
+        margin: 0;
+    }
+}
+
+.filter-container {
     background: #fff;
-    transition: all 0.3s;
+    border-radius: var(--my-radius, 12px);
+    padding: 24px;
+    margin-bottom: 30px;
+    box-shadow: var(--my-shadow, 0 8px 24px rgba(31, 41, 55, 0.05));
+    
+    .filter-search {
+        max-width: 600px;
+        margin: 0 auto 24px;
+        
+        :deep(.el-input__wrapper) {
+            border-radius: 20px 0 0 20px;
+            box-shadow: none;
+            background: #f5f7fa;
+            padding-left: 15px;
+            
+            &.is-focus {
+                background: #fff;
+                box-shadow: 0 0 0 1px var(--theme-primary-color) inset;
+            }
+        }
+        
+        :deep(.el-input-group__append) {
+            border-radius: 0 20px 20px 0;
+            background: var(--theme-primary-color);
+            border: none;
+            color: #fff;
+            box-shadow: none;
+            
+            button {
+                color: #fff;
+                border: none;
+                padding: 12px 24px;
+                font-weight: 500;
+                
+                &:hover {
+                    background: rgba(255,255,255,0.1);
+                }
+            }
+        }
+    }
+    
+    .filter-categories {
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        
+        .cat-label {
+            font-weight: 600;
+            color: #333;
+            margin-top: 6px;
+            margin-right: 5px;
+        }
+        
+        .cat-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .cat-item {
+            padding: 6px 16px;
+            border-radius: 20px;
+            color: #666;
+            background: #f5f7fa;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            
+            &:hover {
+                color: var(--theme-primary-color);
+                background: rgba(51, 204, 204, 0.1);
+            }
+            
+            &.active {
+                background: var(--theme-primary-color);
+                color: #fff;
+                box-shadow: 0 4px 12px rgba(51, 204, 204, 0.3);
+            }
+        }
+    }
 }
-.floor_goods_wrap_li:hover {
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
+
+.goods-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
 }
-.floor_goods_wrap_b {
-    padding: 10px;
-}
-.floor_goods_img {
-    display: block;
-    width: 100%;
+
+.goods-card {
+    background: #fff;
+    border-radius: var(--my-radius, 12px);
     overflow: hidden;
-    border-radius: 4px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    border: 1px solid transparent;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    
+    &:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+        border-color: rgba(0,0,0,0.02);
+        
+        .hover-overlay {
+            opacity: 1;
+        }
+        
+        .product-img {
+            transform: scale(1.05);
+        }
+    }
+    
+    .card-image {
+        position: relative;
+        padding-bottom: 100%; /* 1:1 Aspect Ratio */
+        overflow: hidden;
+        background: #f9f9f9;
+        
+        .product-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        
+        .hover-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            
+            .view-btn {
+                background: #fff;
+                color: #333;
+                padding: 8px 20px;
+                border-radius: 20px;
+                font-size: 13px;
+                font-weight: 600;
+                transform: translateY(10px);
+                transition: transform 0.3s;
+            }
+        }
+    }
+    
+    &:hover .view-btn {
+        transform: translateY(0);
+    }
+    
+    .card-info {
+        padding: 16px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        
+        .goods-title {
+            font-size: 15px;
+            color: #333;
+            margin: 0 0 10px;
+            line-height: 1.5;
+            height: 44px; /* 2 lines */
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        
+        .goods-meta {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            
+            .price-box {
+                color: #ff4d4f;
+                font-weight: 700;
+                line-height: 1;
+                
+                .currency {
+                    font-size: 14px;
+                    margin-right: 2px;
+                }
+                
+                .amount {
+                    font-size: 20px;
+                }
+            }
+            
+            .sales-info {
+                font-size: 12px;
+                color: #999;
+            }
+        }
+    }
 }
-.floor_goods_tit {
-    display: block;
-    margin-top: 10px;
-    font-size: 16px;
-    color: #333;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    text-decoration: none;
+
+.pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 40px;
+    
+    :deep(.el-pagination.is-background .el-pager li:not(.is-disabled).is-active) {
+        background-color: var(--theme-primary-color);
+    }
 }
-.floor_goods_tit:hover {
-    color: #409eff;
-}
-.floor_goods_txt {
-    margin-top: 5px;
-    font-size: 14px;
-    color: #666;
-}
-.jd-search {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 20px;
-}
-.jd-search td {
-    padding: 10px;
-    border-bottom: 1px solid #f0f0f0;
-}
-.jd-search .label {
-    width: 80px;
-    font-weight: bold;
-    color: #666;
-}
-.search-radio a {
-    display: inline-block;
-    margin-right: 15px;
-    color: #666;
-    text-decoration: none;
-    padding: 2px 8px;
-    border-radius: 4px;
-}
-.search-radio a.active,
-.search-radio a:hover {
-    color: #fff;
-    background-color: #409eff;
+
+@media (max-width: 768px) {
+    .filter-container {
+        padding: 16px;
+        
+        .filter-search {
+            margin-bottom: 16px;
+        }
+        
+        .filter-categories {
+            justify-content: flex-start;
+            
+            .cat-label {
+                width: 100%;
+                margin-bottom: 8px;
+            }
+        }
+    }
+    
+    .goods-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .goods-card .card-info {
+        padding: 10px;
+        
+        .goods-title {
+            font-size: 13px;
+            height: 38px;
+        }
+        
+        .price-box .amount {
+            font-size: 16px;
+        }
+    }
 }
 </style>

@@ -77,6 +77,7 @@ import DB from "@/utils/db";
 import { ref, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
+import { pushHistory } from "@/utils/history";
 
 import router from "@/router";
 import { ArrowLeft } from '@element-plus/icons-vue';
@@ -84,6 +85,11 @@ import { ArrowLeft } from '@element-plus/icons-vue';
 const route = useRoute();
 const product = ref({});
 const currentImage = ref("");
+
+const getSummary = (html) => {
+    if (!html) return "";
+    return String(html).replace(/<[^>]+>/g, "").trim().slice(0, 80);
+};
 
 const loadDetail = async (id) => {
     if (!id) return;
@@ -115,6 +121,13 @@ const loadDetail = async (id) => {
             }
 
             product.value = data;
+            pushHistory("mall", {
+                id: product.value.id || id,
+                title: product.value.name,
+                summary: getSummary(product.value.intro),
+                cover: product.value.cover_url,
+                url: `/mall/detail?id=${product.value.id || id}`,
+            });
             // 设置默认图片
             let firstImage = product.value.cover_url;
             // 优先使用非 product_ 开头的图片
@@ -145,7 +158,7 @@ const buyNow = async () => {
     if (!product.value.id) return;
     
     try {
-        const res = await http.post("/api/cart/add", { productId: product.value.id, quantity: 1 });
+        const res = await http.post("/api/cart/add", { productId: parseInt(product.value.id), quantity: 1 });
         if (res.code === 0) {
             router.push('/mall/cart');
         } else {
@@ -167,7 +180,7 @@ const addToCart = async () => {
     if (!product.value.id) return;
     
     try {
-        const res = await http.post("/api/cart/add", { productId: product.value.id, quantity: 1 });
+        const res = await http.post("/api/cart/add", { productId: parseInt(product.value.id), quantity: 1 });
         if (res.code === 0) {
             ElMessage.success('成功加入购物车！');
         } else {

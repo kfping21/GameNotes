@@ -1,6 +1,6 @@
 <template>
     <div class="reply J_ReplyBlock" v-if="replyList.length > 0">
-        <div class="reply-block" v-for="hf in replyList">
+        <div class="reply-block" v-for="hf in visibleReplies" :key="hf.id">
             <div class="reply-content">
                 <span class="reply-user">
                     <b class="reply-user-nick J_User">{{ hf.huifuren }}</b> :
@@ -11,6 +11,11 @@
                 <i class="reply-dot">·</i>
                 <span>{{ hf.addtime }}</span>
             </div>
+        </div>
+        <div class="reply-toggle" v-if="replyList.length > maxVisible">
+            <el-button link type="primary" size="small" @click="toggleExpand">
+                {{ expanded ? "收起回复" : `展开全部(${replyList.length})` }}
+            </el-button>
         </div>
     </div>
 </template>
@@ -23,6 +28,8 @@
         data() {
             return {
                 replyList: [],
+                expanded: false,
+                maxVisible: 2,
             };
         },
         props: {
@@ -33,10 +40,24 @@
                 this.loadReply();
             },
         },
+        computed: {
+            visibleReplies() {
+                if (this.expanded) {
+                    return this.replyList;
+                }
+                return this.replyList.slice(0, this.maxVisible);
+            },
+        },
         methods: {
+            toggleExpand() {
+                this.expanded = !this.expanded;
+            },
             async loadReply() {
                 if (this.commitid) {
                     this.replyList = await DB.name("pinglunhuifu").order("id asc").where("pinglunid", this.commitid).select();
+                    if (this.replyList.length <= this.maxVisible) {
+                        this.expanded = false;
+                    }
                 }
             },
         },
@@ -102,5 +123,9 @@
     .reply-operate .reply-operate-report,
     .reply-operate .reply-operate-report-dot {
         display: none;
+    }
+    .reply-toggle {
+        text-align: center;
+        margin-top: 10px;
     }
 </style>

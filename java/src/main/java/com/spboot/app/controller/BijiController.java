@@ -209,7 +209,7 @@ public class BijiController {
             int remaining = 10 - recommendations.size();
             List<Map<String, Object>> popularNotes = DB.name("biji")
                 .where("issh", "是") // 只推荐已审核的笔记
-                .order("zhongcaodu DESC, guanzhuliang DESC, id DESC")
+                .order("zhongcaodu DESC, id DESC")
                 .limit(remaining)
                 .select();
 

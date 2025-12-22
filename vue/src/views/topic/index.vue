@@ -2,38 +2,117 @@
   <div class="topic-index">
     <div class="page-header">
       <div class="header-content">
-        <h2><i class="fa fa-comments" style="margin-right: 12px; color: #409eff;"></i>话题广场</h2>
+        <h2>
+          <i class="fa fa-comments" style="margin-right: 12px; color: var(--theme-primary-color);"></i>
+          话题广场
+        </h2>
         <p class="subtitle">汇聚热门游戏话题，分享你的独到见解</p>
       </div>
       <div class="search-box">
-        <el-input 
-          v-model="searchKeyword" 
-          placeholder="搜索感兴趣的话题..." 
+        <el-autocomplete
+          v-model="searchKeyword"
+          :fetch-suggestions="querySearch"
+          placeholder="搜索感兴趣的话题..."
           class="search-input"
+          @select="handleSelect"
           @keyup.enter="handleSearch"
           clearable
           @clear="handleSearch"
           size="large"
+          style="width: 100%"
         >
           <template #prefix>
             <i class="fa fa-search" style="color: #909399"></i>
           </template>
+          <template #default="{ item }">
+            <div class="suggestion-item">
+              <span v-if="item.type === 'history'" style="color: #909399; margin-right: 8px;">
+                <i class="fa fa-history"></i>
+              </span>
+              <span v-else style="color: #f56c6c; margin-right: 8px;">
+                <i class="fa fa-fire"></i>
+              </span>
+              <span>{{ item.value }}</span>
+            </div>
+          </template>
           <template #append>
             <el-button @click="handleSearch" type="primary" class="search-btn">搜索</el-button>
           </template>
-        </el-input>
+        </el-autocomplete>
       </div>
     </div>
     
+    <div class="tag-filter">
+      <div class="filter-title">
+        <span class="filter-label"><i class="fa fa-tags" style="margin-right: 6px;"></i>标签筛选</span>
+        <div class="filter-actions">
+          <el-switch v-model="showSubscribedOnly" active-text="只看关注" />
+          <el-radio-group v-model="tagMatchMode" size="small" class="match-toggle">
+            <el-radio-button label="all">全包含</el-radio-button>
+            <el-radio-button label="any">任意包含</el-radio-button>
+          </el-radio-group>
+          <el-button v-if="selectedTagIds.length" link type="primary" class="clear-btn" @click="clearTagFilters">清空</el-button>
+        </div>
+      </div>
+
+      <div class="subscribe-summary">
+        <template v-if="subscribedTagIds.length">
+          已关注 {{ subscribedTagIds.length }} 个标签
+          <el-button link type="primary" @click="applySubscribedTags">一键筛选</el-button>
+        </template>
+        <template v-else>
+          还没有关注标签
+        </template>
+      </div>
+
+      <div v-if="tagLoading" class="tag-loading">
+        <el-skeleton :rows="1" animated />
+      </div>
+      <div v-else class="tag-list">
+        <div v-for="tag in tagOptions" :key="tag.id" class="tag-item" :class="{ subscribed: isSubscribed(tag.id) }">
+          <el-tag
+            class="tag-chip"
+            :type="isTagSelected(tag.id) ? 'primary' : 'info'"
+            :effect="isTagSelected(tag.id) ? 'dark' : 'plain'"
+            @click="toggleTag(tag.id)"
+          >
+            {{ tag.biaoqianmingcheng }}
+          </el-tag>
+          <span class="subscribe-btn" :title="isSubscribed(tag.id) ? '取消关注' : '关注标签'" @click.stop="toggleSubscribe(tag.id)">
+            <el-icon v-if="isSubscribed(tag.id)"><StarFilled /></el-icon>
+            <el-icon v-else><Star /></el-icon>
+          </span>
+        </div>
+        <el-empty v-if="tagOptions.length === 0" description="暂无标签" />
+      </div>
+    </div>
+
     <div class="categories-section">
       <div class="section-title-bar">
-        <h3 v-if="!isSearching"><i class="fa fa-fire" style="color: #f56c6c; margin-right: 8px;"></i>热门话题</h3>
-        <h3 v-else>
-            搜索结果: "{{ searchKeyword }}" 
-            <el-button link type="primary" @click="clearSearch" style="margin-left: 10px; font-size: 14px;">
-                <i class="fa fa-refresh" style="margin-right: 4px"></i>返回热门话题
-            </el-button>
+        <h3 v-if="!isSearching">
+          <i class="fa fa-fire" style="color: #f56c6c; margin-right: 8px;"></i>
+          热门话题
         </h3>
+        <h3 v-else>
+          搜索结果: "{{ appliedKeyword }}"
+          <el-button link type="primary" @click="clearSearch" style="margin-left: 10px; font-size: 14px;">
+            <i class="fa fa-refresh" style="margin-right: 4px"></i>返回热门话题
+          </el-button>
+        </h3>
+        <div class="list-controls">
+          <el-select v-model="sortMode" size="small" class="control-item">
+            <el-option label="默认排序" value="default" />
+            <el-option label="最新发布" value="latest" />
+            <el-option label="热度优先" value="hot" />
+            <el-option label="讨论最多" value="discuss" />
+          </el-select>
+          <el-select v-model="timeRange" size="small" class="control-item">
+            <el-option label="全部时间" value="all" />
+            <el-option label="近7天" value="7" />
+            <el-option label="近30天" value="30" />
+            <el-option label="近90天" value="90" />
+          </el-select>
+        </div>
       </div>
       
       <div v-if="loading" class="loading-state">
@@ -41,27 +120,17 @@
       </div>
       <div v-else class="category-list">
         <div 
-          v-for="(topic, index) in categories" 
+          v-for="(topic, index) in sortedCategories" 
           :key="topic.id" 
-          class="category-item"
+          class="category-tag"
           @click="goToDetail(topic.id)"
         >
-          <div class="card-body">
-              <div class="topic-icon" :class="'bg-' + (index % 5)">
-                  {{ topic.title ? topic.title.substring(0, 1) : '#' }}
-              </div>
-              <div class="topic-info">
-                  <h4>{{ topic.title }}</h4>
-                  <p class="intro">{{ topic.intro || '暂无简介' }}</p>
-              </div>
-          </div>
-          <div class="card-footer">
-              <span class="action-text">点击进入讨论</span>
-              <i class="fa fa-arrow-right action-icon"></i>
-          </div>
+            <span class="tag-hash" :class="'text-' + (index % 5)">#</span>
+            <span class="tag-text">{{ topic.title }}</span>
+            <span class="tag-hot" v-if="index < 3"><i class="fa fa-fire"></i></span>
         </div>
-        <div v-if="categories.length === 0" class="empty-tip">
-            <el-empty :description="isSearching ? '未找到相关话题' : '暂无热门话题'" />
+        <div v-if="sortedCategories.length === 0" class="empty-tip">
+            <el-empty :description="emptyTip" />
         </div>
       </div>
     </div>
@@ -69,74 +138,264 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { getTopicCategories } from '@/module/topic';
-import { ElMessage } from 'element-plus';
+import { ref, onMounted, computed } from "vue";
+import { useRouter } from "vue-router";
+import { getTopicCategories } from "@/module/topic";
+import http from "@/utils/ajax/http";
+import { ElMessage } from "element-plus";
+import { Star, StarFilled } from "@element-plus/icons-vue";
+import { getSubscribedTags, toggleSubscribedTag } from "@/utils/tag-subscription";
 
 const router = useRouter();
 const categories = ref([]);
 const loading = ref(false);
-const searchKeyword = ref('');
+const searchKeyword = ref("");
+const appliedKeyword = ref("");
 const isSearching = ref(false);
+const tagOptions = ref([]);
+const tagLoading = ref(false);
+const selectedTagIds = ref([]);
+const tagMatchMode = ref("all");
+const subscribedTagIds = ref(getSubscribedTags());
+const showSubscribedOnly = ref(false);
+const sortMode = ref("default");
+const timeRange = ref("all");
+
+const getRandomHotSearches = () => {
+    const pool = ["王者荣耀", "原神", "英雄联盟", "绝地求生", "我的世界", "和平精英", "Apex英雄", "CS:GO", "DOTA2", "永劫无间"];
+    return pool.sort(() => 0.5 - Math.random()).slice(0, 5).map((item) => ({ value: item, type: "hot" }));
+};
+
+const getHistory = () => {
+    try {
+        const history = JSON.parse(localStorage.getItem("topic_search_history") || "[]");
+        return history.map((item) => ({ value: item, type: "history" }));
+    } catch (e) {
+        return [];
+    }
+};
+
+const saveHistory = (keyword) => {
+    if (!keyword) return;
+    try {
+        let history = JSON.parse(localStorage.getItem("topic_search_history") || "[]");
+        history = history.filter((h) => h !== keyword);
+        history.unshift(keyword);
+        if (history.length > 10) history = history.slice(0, 10);
+        localStorage.setItem("topic_search_history", JSON.stringify(history));
+    } catch (e) {
+        console.error(e);
+    }
+};
+
+const querySearch = (queryString, cb) => {
+    let results = [];
+    if (!queryString) {
+        const history = getHistory();
+        results = history.length > 0 ? history : getRandomHotSearches();
+    } else {
+        const history = getHistory();
+        results = history.filter((item) => item.value.toLowerCase().includes(queryString.toLowerCase()));
+        if (results.length === 0) {
+            results = getRandomHotSearches().filter((item) => item.value.toLowerCase().includes(queryString.toLowerCase()));
+        }
+    }
+    cb(results);
+};
+
+const handleSelect = (item) => {
+    searchKeyword.value = item.value;
+    handleSearch();
+};
+
+const normalizeTagId = (id) => String(id);
+
+const parseTagIds = (raw) => {
+    if (!raw) return [];
+    if (Array.isArray(raw)) {
+        return raw.map((item) => normalizeTagId(item)).filter(Boolean);
+    }
+    return String(raw)
+        .replace(/，/g, ",")
+        .split(/[,;|\s]+/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((item) => normalizeTagId(item));
+};
+
+const getTopicTagIds = (topic) => {
+    if (!topic) return [];
+    return parseTagIds(topic.tagIds || topic.tag_ids);
+};
+
+const isTagSelected = (id) => selectedTagIds.value.includes(normalizeTagId(id));
+const isSubscribed = (id) => subscribedTagIds.value.includes(normalizeTagId(id));
+
+const toggleTag = (id) => {
+    const normalized = normalizeTagId(id);
+    const idx = selectedTagIds.value.indexOf(normalized);
+    if (idx >= 0) {
+        selectedTagIds.value.splice(idx, 1);
+    } else {
+        selectedTagIds.value.push(normalized);
+    }
+};
+
+const toggleSubscribe = (id) => {
+    subscribedTagIds.value = toggleSubscribedTag(id);
+};
+
+const applySubscribedTags = () => {
+    selectedTagIds.value = [...subscribedTagIds.value];
+};
+
+const clearTagFilters = () => {
+    selectedTagIds.value = [];
+};
 
 const fetchCategories = async () => {
   loading.value = true;
   try {
-    // 使用新的 POST 接口，带分页参数和搜索关键字
     const params = { 
         page: 1, 
-        pagesize: 20,
-        keyword: searchKeyword.value // 传递搜索关键字给后端
+        pagesize: 200,
+        keyword: appliedKeyword.value,
     };
     const res = await getTopicCategories(params);
-    if (res.code === 0 || res.code === '0') {
-      // 后端返回结构: { lists: [...], total, page, pagesize }
-      let list = res.data.lists || [];
-      
-      // 前端辅助过滤：如果后端未实现模糊搜索，这里进行二次过滤确保效果
-      if (searchKeyword.value.trim()) {
-          const k = searchKeyword.value.trim().toLowerCase();
-          list = list.filter(item => 
-              (item.title && item.title.toLowerCase().includes(k)) || 
-              (item.intro && item.intro.toLowerCase().includes(k))
-          );
-      }
-      
-      categories.value = list;
+    if (res.code === 0 || res.code === "0") {
+      categories.value = res.data.lists || [];
     } else {
-      ElMessage.error(res.msg || '获取话题失败');
+      ElMessage.error(res.msg || "获取话题失败");
     }
   } catch (error) {
     console.error(error);
-    ElMessage.error('网络错误');
+    ElMessage.error("网络错误");
   } finally {
     loading.value = false;
   }
 };
 
+const fetchTags = async () => {
+    tagLoading.value = true;
+    try {
+        const res = await http.get("/api/biaoqian/selectAll");
+        if (res.code === 0 || res.code === "0") {
+            tagOptions.value = res.data || [];
+        } else {
+            ElMessage.error(res.msg || "获取标签失败");
+        }
+    } catch (error) {
+        console.error(error);
+        ElMessage.error("网络错误");
+    } finally {
+        tagLoading.value = false;
+    }
+};
+
+const getTopicTime = (item) => {
+    const raw = item.addtime || item.createdAt || item.created_at || item.add_time || item.create_time || item.time;
+    if (!raw) return 0;
+    const stamp = new Date(raw).getTime();
+    return Number.isNaN(stamp) ? 0 : stamp;
+};
+
+const getTopicHeat = (item) => {
+    return Number(item.hot || item.heat || item.views || item.view_count || item.clicknum || item.discuss_count || item.discussCount || 0);
+};
+
+const getTopicDiscuss = (item) => {
+    return Number(item.discuss_count || item.discussCount || item.comment_count || item.commentCount || 0);
+};
+
+const filteredCategories = computed(() => {
+    let list = categories.value || [];
+    const keyword = appliedKeyword.value.trim().toLowerCase();
+    if (keyword) {
+        list = list.filter((item) =>
+            (item.title && item.title.toLowerCase().includes(keyword)) ||
+            (item.intro && item.intro.toLowerCase().includes(keyword))
+        );
+    }
+    if (showSubscribedOnly.value && subscribedTagIds.value.length) {
+        list = list.filter((item) => {
+            const ids = getTopicTagIds(item);
+            return subscribedTagIds.value.some((id) => ids.includes(id));
+        });
+    }
+    if (selectedTagIds.value.length > 0) {
+        list = list.filter((item) => {
+            const ids = getTopicTagIds(item);
+            if (ids.length === 0) return false;
+            const idSet = new Set(ids);
+            const matchAll = tagMatchMode.value === "all";
+            return matchAll
+                ? selectedTagIds.value.every((id) => idSet.has(id))
+                : selectedTagIds.value.some((id) => idSet.has(id));
+        });
+    }
+    if (timeRange.value !== "all") {
+        const days = Number(timeRange.value);
+        const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+        list = list.filter((item) => {
+            const time = getTopicTime(item);
+            return time === 0 || time >= cutoff;
+        });
+    }
+    return list;
+});
+
+const sortedCategories = computed(() => {
+    const list = [...filteredCategories.value];
+    if (sortMode.value === "latest") {
+        return list.sort((a, b) => getTopicTime(b) - getTopicTime(a));
+    }
+    if (sortMode.value === "hot") {
+        return list.sort((a, b) => getTopicHeat(b) - getTopicHeat(a));
+    }
+    if (sortMode.value === "discuss") {
+        return list.sort((a, b) => getTopicDiscuss(b) - getTopicDiscuss(a));
+    }
+    return list;
+});
+
+const emptyTip = computed(() => {
+    if (isSearching.value) {
+        return "未找到相关话题";
+    }
+    if (showSubscribedOnly.value && subscribedTagIds.value.length === 0) {
+        return "还没有关注标签";
+    }
+    return "暂无热门话题";
+});
+
 const handleSearch = () => {
-    if (!searchKeyword.value.trim()) {
+    const keyword = searchKeyword.value.trim();
+    if (!keyword) {
+        appliedKeyword.value = "";
         isSearching.value = false;
         fetchCategories();
         return;
     }
+    appliedKeyword.value = keyword;
+    saveHistory(keyword);
     isSearching.value = true;
     fetchCategories();
 };
 
 const clearSearch = () => {
-    searchKeyword.value = '';
+    searchKeyword.value = "";
+    appliedKeyword.value = "";
     isSearching.value = false;
     fetchCategories();
 };
 
 const goToDetail = (id) => {
-  router.push({ path: '/topic/detail', query: { id } });
+  router.push({ path: "/topic/detail", query: { id } });
 };
 
 onMounted(() => {
   fetchCategories();
+  fetchTags();
 });
 </script>
 
@@ -151,9 +410,9 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 40px;
+    margin-bottom: 32px;
     padding-bottom: 20px;
-    border-bottom: 1px solid #ebeef5;
+    border-bottom: 1px solid var(--theme-border-color);
     
     .header-content {
         h2 {
@@ -172,14 +431,14 @@ onMounted(() => {
     }
 
     .search-box {
-        width: 350px;
+        width: 360px;
         .search-input {
             :deep(.el-input-group__append) {
-                background-color: #409eff;
+                background-color: var(--theme-primary-color);
                 color: white;
-                border-color: #409eff;
+                border-color: var(--theme-primary-color);
                 &:hover {
-                    background-color: #66b1ff;
+                    background-color: var(--theme-primary-hover-color);
                 }
             }
         }
@@ -188,7 +447,13 @@ onMounted(() => {
 
   .categories-section {
     .section-title-bar {
-        margin-bottom: 25px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+
         h3 {
             margin: 0;
             font-size: 20px;
@@ -196,119 +461,176 @@ onMounted(() => {
             display: flex;
             align-items: center;
         }
+
+        .list-controls {
+            display: flex;
+            gap: 10px;
+            .control-item {
+                width: 140px;
+            }
+        }
+    }
+  }
+
+  .tag-filter {
+    margin-bottom: 24px;
+    padding: 16px 18px;
+    background: var(--theme-surface-color);
+    border: 1px solid var(--theme-border-color);
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+
+    .filter-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      color: #606266;
+      font-size: 14px;
+      font-weight: 600;
+
+      .filter-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .match-toggle {
+        :deep(.el-radio-button__inner) {
+          padding: 6px 12px;
+        }
+      }
+
+      .clear-btn {
+        font-size: 13px;
+      }
+    }
+
+    .subscribe-summary {
+        font-size: 13px;
+        color: #909399;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .tag-loading {
+      padding: 6px 0;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .tag-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 16px;
+        background: var(--theme-surface-muted);
+        border: 1px dashed transparent;
+
+        &.subscribed {
+            border-color: var(--theme-primary-border-color);
+        }
+    }
+
+    .tag-chip {
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      border-radius: 16px;
+      padding: 4px 12px;
+      user-select: none;
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(64, 158, 255, 0.15);
+      }
+    }
+
+    .subscribe-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        cursor: pointer;
+        color: var(--theme-primary-color);
+        background: var(--theme-primary-soft-color);
+        transition: transform 0.2s;
+
+        &:hover {
+            transform: scale(1.05);
+        }
     }
   }
 
   .category-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 25px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
 
-    .category-item {
-      background: #fff;
-      border-radius: 12px;
-      overflow: hidden;
+    .category-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 10px 20px;
+      background: var(--theme-surface-color);
+      border: 1px solid var(--theme-border-color);
+      border-radius: 30px;
       cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-      border: 1px solid #ebeef5;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      height: 180px;
+      transition: all 0.3s;
+      font-size: 15px;
+      color: #606266;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 
       &:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-        border-color: #c6e2ff;
-        
-        .card-footer {
-            background-color: #f5f7fa;
-            .action-icon {
-                transform: translateX(5px);
-            }
-            .action-text {
-                color: #409eff;
-            }
-        }
+        color: var(--theme-primary-color);
+        border-color: var(--theme-primary-border-color);
+        background-color: var(--theme-primary-soft-color);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
       }
 
-      .card-body {
-          padding: 20px;
-          display: flex;
-          align-items: flex-start;
+      .tag-hash {
+          margin-right: 6px;
+          font-weight: bold;
+          font-size: 16px;
           
-          .topic-icon {
-              width: 50px;
-              height: 50px;
-              border-radius: 12px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 24px;
-              font-weight: bold;
-              color: white;
-              margin-right: 15px;
-              flex-shrink: 0;
-              
-              &.bg-0 { background: linear-gradient(135deg, #409eff, #79bbff); }
-              &.bg-1 { background: linear-gradient(135deg, #67c23a, #95d475); }
-              &.bg-2 { background: linear-gradient(135deg, #e6a23c, #f3d19e); }
-              &.bg-3 { background: linear-gradient(135deg, #f56c6c, #fab6b6); }
-              &.bg-4 { background: linear-gradient(135deg, #909399, #c8c9cc); }
-          }
-          
-          .topic-info {
-              flex: 1;
-              overflow: hidden;
-              
-              h4 {
-                margin: 0 0 8px 0;
-                font-size: 18px;
-                color: #303133;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-              }
-
-              .intro {
-                margin: 0;
-                color: #606266;
-                font-size: 14px;
-                line-height: 1.5;
-                display: -webkit-box;
-                -webkit-line-clamp: 3;
-                -webkit-box-orient: vertical;
-                overflow: hidden;
-              }
-          }
+          &.text-0 { color: var(--theme-primary-color); }
+          &.text-1 { color: #67c23a; }
+          &.text-2 { color: #e6a23c; }
+          &.text-3 { color: #f56c6c; }
+          &.text-4 { color: #909399; }
       }
       
-      .card-footer {
-          padding: 12px 20px;
-          border-top: 1px solid #f2f6fc;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          transition: background-color 0.3s;
-          
-          .action-text {
-              font-size: 13px;
-              color: #909399;
-              transition: color 0.3s;
-          }
-          
-          .action-icon {
-              color: #c0c4cc;
-              transition: transform 0.3s;
-          }
+      .tag-text {
+          font-weight: 500;
+      }
+
+      .tag-hot {
+          margin-left: 8px;
+          color: #f56c6c;
+          font-size: 12px;
+          animation: pulse 2s infinite;
       }
     }
     
     .empty-tip {
-        grid-column: 1 / -1;
+        width: 100%;
         padding: 60px 0;
     }
+  }
+
+  @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.1); }
+      100% { opacity: 1; transform: scale(1); }
   }
   
   .loading-state {

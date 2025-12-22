@@ -15,14 +15,14 @@
                 <div v-else v-loading="loading">
                     <div class="order-item" v-for="item in list" :key="item.id">
                         <div class="item-header">
-                            <span class="time">{{ item.addtime }}</span>
-                            <span class="order-no">订单号：{{ item.id }}</span>
-                            <span class="status">{{ item.status }}</span>
+                            <span class="time">{{ item.addtime || item.create_time || item.created_at || item.createdAt || item.add_time || item.createTime || item.time || item.date }}</span>
+                            <span class="order-no">订单号：{{ item.id || item.orderId || item.order_id }}</span>
+                            <span class="status">{{ item.status || item.state || item.orderStatus }}</span>
                         </div>
                         <div class="item-body" @click="$router.push({ path: '/mall/order/detail', query: { id: item.id } })">
                             <div class="info-row">
                                 <div class="total">
-                                    总额：<span class="price">￥{{ item.total_amount }}</span>
+                                    总额：<span class="price">￥{{ item.total_amount || item.totalAmount || item.amount || item.total_price || item.totalPrice || item.total || item.sum }}</span>
                                 </div>
                                 <el-button type="primary" link>查看详情 ></el-button>
                             </div>

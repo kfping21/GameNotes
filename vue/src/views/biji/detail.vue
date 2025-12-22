@@ -12,7 +12,9 @@
                     <el-descriptions class="margin-top" :column="3" border>
                         <el-descriptions-item label="笔记编号"> {{ map.bijibianhao }} </el-descriptions-item>
                         <el-descriptions-item label="笔记名称"> {{ map.bijimingcheng }} </el-descriptions-item>
-                        <el-descriptions-item label="标签"> <e-select-view module="biaoqian" :value="map.biaoqian" select="id" show="biaoqianmingcheng"></e-select-view> </el-descriptions-item>
+                        <el-descriptions-item label="标签"> 
+                            <el-tag v-for="tag in parseTags(map.biaoqian)" :key="tag" style="margin-right: 5px">{{ tag }}</el-tag>
+                        </el-descriptions-item>
                         <el-descriptions-item label="关联游戏"> <e-select-view module="youxi" :value="map.guanlianyouxi" select="id" show="youximingcheng"></e-select-view> </el-descriptions-item>
                         <el-descriptions-item label="关注量"> {{ map.guanzhuliang }} </el-descriptions-item>
                         <el-descriptions-item label="种草度"> {{ map.zhongcaodu }} </el-descriptions-item>
@@ -81,6 +83,11 @@
             default: true,
         },
     });
+
+    const parseTags = (biaoqian) => {
+        if (!biaoqian) return [];
+        return biaoqian.replace(/，/g, ',').split(/[,;|]/).map(t => t.trim()).filter(Boolean);
+    };
 
     /**
      * 获取详情页面的一行数据,当url参数id变更时，当url参数id变更时，自动更新map中的数据

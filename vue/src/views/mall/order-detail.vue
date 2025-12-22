@@ -7,24 +7,23 @@
                     <div>
                         <el-button type="success" @click="$router.push('/mall/products')">继续购物</el-button>
                         <el-button type="primary" @click="$router.push('/mall/cart')">我的购物车</el-button>
-                        <el-button type="warning" @click="$router.push('/mall/order/list')">我的订单</el-button>
                     </div>
                 </div>
 
                 <div v-if="order" class="order-content">
                     <div class="status-bar">
                         <div class="status-text">
-                            当前状态：<span class="status">{{ order.status }}</span>
+                            当前状态：<span class="status">{{ order.status || order.state || order.orderStatus || (order.order && order.order.status) }}</span>
                         </div>
                         <div class="order-meta">
-                            <span>订单号：{{ order.id }}</span>
-                            <span>下单时间：{{ order.addtime || order.create_time || order.created_at }}</span>
+                            <span>订单号：{{ order.id || order.orderId || order.order_id || (order.order && (order.order.id || order.order.orderId || order.order.order_id)) }}</span>
+                            <span>下单时间：{{ order.addtime || order.create_time || order.created_at || order.createdAt || order.add_time || order.createTime || order.time || order.date || (order.order && (order.order.addtime || order.order.create_time || order.order.created_at || order.order.createdAt || order.order.add_time || order.order.createTime || order.order.time || order.order.date)) }}</span>
                         </div>
                     </div>
 
                     <div class="goods-list">
                         <h4>商品清单</h4>
-                        <el-table :data="order.items" border>
+                        <el-table :data="order.items || (order.order && order.order.items) || []" border>
                             <el-table-column label="商品" min-width="300">
                                 <template #default="{ row }">
                                     <div class="goods-info">
@@ -48,7 +47,7 @@
                     <div class="order-footer">
                         <div class="total-row">
                             <span class="label">订单总额：</span>
-                            <span class="amount">￥{{ order.total_amount }}</span>
+                            <span class="amount">￥{{ order.total_amount || order.totalAmount || order.amount || order.total_price || order.totalPrice || order.total || order.sum || (order.order && (order.order.total_amount || order.order.totalAmount || order.order.amount || order.order.total_price || order.order.totalPrice || order.order.total || order.order.sum)) }}</span>
                         </div>
                     </div>
                 </div>

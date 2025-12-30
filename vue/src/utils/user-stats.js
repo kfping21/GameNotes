@@ -64,11 +64,12 @@ export const fetchUserStats = async (username) => {
         };
     }
 
-    const [biji, pinglun, shoucang, dianzan] = await Promise.all([
+    const [biji, pinglun, shoucang, dianzan, zhongcao] = await Promise.all([
         safeSelect(DB.name("biji").where("tianjiaren", username)),
         safeSelect(DB.name("pinglun").where("pinglunren", username)),
         safeSelect(DB.name("shoucang").where("username", username)),
         safeSelect(DB.name("dianzan").where("username", username)),
+        safeSelect(DB.name("zhongcao").where("zhongcaoren", username)),
     ]);
 
     let follow = 0;
@@ -92,6 +93,7 @@ export const fetchUserStats = async (username) => {
             pinglun: pinglun.length,
             shoucang: shoucang.length,
             dianzan: dianzan.length,
+            zhongcao: zhongcao.length,
             follow,
             fans,
             history,
@@ -101,6 +103,7 @@ export const fetchUserStats = async (username) => {
             pinglun,
             shoucang,
             dianzan,
+            zhongcao,
         },
     };
 };

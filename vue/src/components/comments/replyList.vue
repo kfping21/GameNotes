@@ -3,7 +3,7 @@
         <div class="reply-block" v-for="hf in visibleReplies" :key="hf.id">
             <div class="reply-content">
                 <span class="reply-user">
-                    <b class="reply-user-nick J_User">{{ hf.huifuren }}</b> :
+                    <b class="reply-user-nick J_User">{{ hf.huifuren_nickname || hf.huifuren }}</b> :
                 </span>
                 {{ hf.huifuneirong }}
             </div>
@@ -54,7 +54,13 @@
             },
             async loadReply() {
                 if (this.commitid) {
-                    this.replyList = await DB.name("pinglunhuifu").order("id asc").where("pinglunid", this.commitid).select();
+                    this.replyList = await DB.name("pinglunhuifu")
+                        .alias('ph')
+                        .joinLeft("yonghu u", "u.zhanghao=ph.huifuren")
+                        .field("ph.*, u.mingcheng as huifuren_nickname")
+                        .order("ph.id asc")
+                        .where("ph.pinglunid", this.commitid)
+                        .select();
                     if (this.replyList.length <= this.maxVisible) {
                         this.expanded = false;
                     }

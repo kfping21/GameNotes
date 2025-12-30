@@ -35,10 +35,16 @@
                             <i class="fa fa-search"></i>
                         </template>
                         <template #default="{ item }">
-                            <div class="suggestion-item">
+                            <div v-if="item.type === 'header'" class="search-suggestion-header" @click.stop>
+                                <span>{{ item.value }}</span>
+                            </div>
+                            <div v-else class="suggestion-item">
                                 <span v-if="item.type === 'history'" style="color: #909399; margin-right: 8px;"><i class="fa fa-history"></i></span>
                                 <span v-else style="color: #f56c6c; margin-right: 8px;"><i class="fa fa-fire"></i></span>
-                                <span>{{ item.value }}</span>
+                                <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item.value }}</span>
+                                <span v-if="item.type === 'history'" class="delete-history" @click.stop="deleteHistoryItem(item)">
+                                    <el-icon><Close /></el-icon>
+                                </span>
                             </div>
                         </template>
                         <template #append>
@@ -117,7 +123,7 @@ import DB from "@/utils/db";
 import { ref, reactive, watch, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import { extend } from "@/utils/extend";
-import { ShoppingCart, List } from '@element-plus/icons-vue';
+import { ShoppingCart, List, Close } from '@element-plus/icons-vue';
 
 const route = useRoute();
 const search = reactive({
@@ -133,14 +139,13 @@ const totalCount = ref(0);
 const categories = ref([]);
 
 const getRandomHotSearches = () => {
-    const pool = ['手办', 'T恤', '徽章', '抱枕', '钥匙扣', '鼠标垫', '海报', '公仔', '模型', '卡牌'];
-    return pool.sort(() => 0.5 - Math.random()).slice(0, 5).map(item => ({ value: item, type: 'hot' }));
+    const pool = ['黑神话：悟空', '原神', '王者荣耀', '只狼', '艾尔登法环', '生化危机8', '战神5', '手办', 'T恤', '鼠标', '挂件', '巫师3', '最终幻想14', '博德之门3'];
+    return pool.sort(() => 0.5 - Math.random()).slice(0, 3);
 };
 
 const getHistory = () => {
     try {
-        const history = JSON.parse(localStorage.getItem('mall_search_history') || '[]');
-        return history.map(item => ({ value: item, type: 'history' }));
+        return JSON.parse(localStorage.getItem('mall_search_history') || '[]');
     } catch (e) {
         return [];
     }
@@ -159,26 +164,51 @@ const saveHistory = (keyword) => {
     }
 };
 
+let lastSearchCallback = null;
+
+const deleteHistoryItem = (item) => {
+    try {
+        let history = JSON.parse(localStorage.getItem('mall_search_history') || '[]');
+        history = history.filter(h => h !== item.value);
+        localStorage.setItem('mall_search_history', JSON.stringify(history));
+        if (lastSearchCallback) {
+            querySearch(search.keyword, lastSearchCallback);
+        }
+    } catch (e) {
+        console.error(e);
+    }
+};
+
 const querySearch = (queryString, cb) => {
+    lastSearchCallback = cb;
     let results = [];
+    const history = getHistory();
+
     if (!queryString) {
-        const history = getHistory();
-        if (history.length > 0) {
-            results = history;
-        } else {
-            results = getRandomHotSearches();
+        // 历史记录
+        const historyItems = history.slice(0, 3).map(item => ({ value: item, type: 'history' }));
+        if (historyItems.length > 0) {
+            results.push({ value: '历史搜索', type: 'header' });
+            results.push(...historyItems);
+        }
+
+        // 热门推荐
+        const hotItems = getRandomHotSearches().map(item => ({ value: item, type: 'hot' }));
+        if (hotItems.length > 0) {
+            results.push({ value: '热门推荐', type: 'header' });
+            results.push(...hotItems);
         }
     } else {
-        const history = getHistory();
-        results = history.filter(item => item.value.toLowerCase().includes(queryString.toLowerCase()));
-        if (results.length === 0) {
-             results = getRandomHotSearches().filter(item => item.value.toLowerCase().includes(queryString.toLowerCase()));
-        }
+        const historyItems = history.filter(item => item.toLowerCase().includes(queryString.toLowerCase()))
+            .slice(0, 10)
+            .map(item => ({ value: item, type: 'history' }));
+        results = historyItems;
     }
     cb(results);
 };
 
 const handleSelect = (item) => {
+    if (item.type === 'header') return;
     search.keyword = item.value;
     searchSubmit();
 };
@@ -196,63 +226,65 @@ watch(
     { deep: true }
 );
 
+const mockCategories = [
+    { id: 1, name: "手办模型" },
+    { id: 2, name: "潮流服饰" },
+    { id: 3, name: "数码外设" },
+    { id: 4, name: "生活周边" },
+    { id: 5, name: "挂件饰品" }
+];
+
+const mockProducts = [
+    { id: 1, categoryId: 1, name: "韩信街头霸王手办", images: [{url: '/upload/prod1.jpg'}], price: 299, sales: 120 },
+    { id: 2, categoryId: 2, name: "原神可莉联名T恤", images: [{url: '/upload/prod2.jpg'}], price: 128, sales: 450 },
+    { id: 3, categoryId: 3, name: "王者荣耀电竞鼠标", images: [{url: '/upload/prod3.jpg'}], price: 399, sales: 88 },
+    { id: 4, categoryId: 1, name: "崩铁三月七手办", images: [{url: '/upload/prod4.jpg'}], price: 599, sales: 60 },
+    { id: 5, categoryId: 4, name: "黑神话：悟空 典藏礼盒套装", images: [{url: '/upload/prod5.jpg'}], price: 888, sales: 2000 },
+    { id: 6, categoryId: 1, name: "黑神话：悟空 主题角色手办", images: [{url: '/upload/prod6.jpg'}], price: 450, sales: 300 },
+    { id: 7, categoryId: 1, name: "只狼 主题手办摆件", images: [{url: '/upload/prod7.jpg'}], price: 320, sales: 150 },
+    { id: 8, categoryId: 5, name: "只狼 小太刀钥匙扣", images: [{url: '/upload/prod8.jpg'}], price: 29, sales: 800 },
+    { id: 9, categoryId: 2, name: "艾尔登法环 主题T恤礼盒", images: [{url: '/upload/prod9.jpg'}], price: 159, sales: 220 },
+    { id: 10, categoryId: 1, name: "艾尔登法环 角色手办摆件", images: [{url: '/upload/prod10.jpg'}], price: 680, sales: 90 },
+    { id: 11, categoryId: 4, name: "黑暗之魂3 主题装饰画海报", images: [{url: '/upload/prod11.jpg'}], price: 49, sales: 300 },
+    { id: 12, categoryId: 1, name: "黑暗之魂3 Q版骑士手办", images: [{url: '/upload/prod12.jpg'}], price: 120, sales: 400 },
+    { id: 13, categoryId: 4, name: "鬼泣 主题马克杯套装", images: [{url: '/upload/prod13.jpg'}], price: 79, sales: 180 },
+    { id: 14, categoryId: 1, name: "鬼泣 主题角色手办", images: [{url: '/upload/prod14.jpg'}], price: 550, sales: 70 },
+    { id: 15, categoryId: 5, name: "明末：渊虚之羽 主题挂件", images: [{url: '/upload/prod15.jpg'}], price: 35, sales: 110 },
+    { id: 16, categoryId: 5, name: "明末：渊虚之羽 纪念徽章摆件", images: [{url: '/upload/prod16.jpg'}], price: 58, sales: 95 },
+    { id: 17, categoryId: 1, name: "巫师3 杰洛特摆件手办", images: [{url: '/upload/prod17.jpg'}], price: 420, sales: 130 },
+    { id: 18, categoryId: 4, name: "巫师3 银剑模型摆件", images: [{url: '/upload/prod18.jpg'}], price: 199, sales: 60 },
+    { id: 19, categoryId: 4, name: "最终幻想14 主题海报明信片套装", images: [{url: '/upload/prod19.jpg'}], price: 25, sales: 500 },
+    { id: 20, categoryId: 2, name: "最终幻想14 主题长袍服饰", images: [{url: '/upload/prod20.jpg'}], price: 220, sales: 150 },
+    { id: 21, categoryId: 4, name: "生化危机8 装备微缩模型套装", images: [{url: '/upload/prod21.jpg'}], price: 180, sales: 80 },
+    { id: 22, categoryId: 5, name: "生化危机8 暗黑钥匙扣挂件", images: [{url: '/upload/prod22.jpg'}], price: 19, sales: 600 },
+    { id: 23, categoryId: 1, name: "博德之门3 队伍手办套装", images: [{url: '/upload/prod23.jpg'}], price: 999, sales: 40 },
+    { id: 24, categoryId: 4, name: "博德之门3 主题艺术海报", images: [{url: '/upload/prod24.jpg'}], price: 39, sales: 210 },
+    { id: 25, categoryId: 4, name: "战神5 典藏礼盒套装", images: [{url: '/upload/prod25.jpg'}], price: 666, sales: 300 },
+    { id: 26, categoryId: 5, name: "战神5 主题武器钥匙扣套装", images: [{url: '/upload/prod26.jpg'}], price: 45, sales: 400 }
+];
+
 const loadCategories = async () => {
-    // 尝试获取分类，如果后端没有专门接口，可以使用 DB 工具查询 product_category 表
-    try {
-        // 假设表名为 product_category
-        const res = await DB.name("product_category").order("sort asc").select();
-        categories.value = res;
-    } catch (e) {
-        console.error("加载分类失败", e);
-    }
+    categories.value = mockCategories;
 };
 
 const loadList = async () => {
-    try {
-        const res = await http.get("/api/mall/products", search);
-        if (res.code === 0) {
-            let records = res.data.records;
-            
-            // 尝试手动获取图片（如果接口没返回 images）
-            try {
-                const ids = records.map(r => r.id);
-                if (ids.length > 0) {
-                    // 尝试从 product_image 表获取图片
-                    const images = await DB.name("product_image")
-                        .where("product_id", "in", ids)
-                        .order("sort asc")
-                        .select();
-                    
-                    console.log("列表页手动获取图片:", images);
-
-                    if (images && Array.isArray(images)) {
-                        records.forEach(r => {
-                            // 将图片关联到商品
-                            const productImages = images.filter(img => img.product_id == r.id);
-                            if (productImages.length > 0) {
-                                r.images = productImages;
-                            }
-                        });
-                    }
-                }
-            } catch (err) {
-                console.warn("尝试加载 product_images 失败，可能表不存在", err);
-            }
-
-            lists.value = records;
-            totalCount.value = res.data.total;
-        } else {
-            // 如果后端返回非0，可能是接口未就绪或报错，尝试清空列表
-            lists.value = [];
-            totalCount.value = 0;
-            console.warn("获取商品列表失败:", res.msg);
-        }
-    } catch (e) {
-        console.error("加载商品列表失败", e);
-        // 发生异常（如404）时，确保列表为空，避免UI卡死
-        lists.value = [];
-        totalCount.value = 0;
+    // 模拟筛选和分页
+    let result = mockProducts;
+    
+    if (search.keyword) {
+        result = result.filter(p => p.name.toLowerCase().includes(search.keyword.toLowerCase()));
     }
+    
+    if (search.categoryId) {
+        result = result.filter(p => p.categoryId == search.categoryId);
+    }
+    
+    totalCount.value = result.length;
+    
+    // 分页
+    const start = (search.page - 1) * search.size;
+    const end = start + search.size;
+    lists.value = result.slice(start, end);
 };
 
 const searchSubmit = () => {
@@ -589,6 +621,35 @@ onMounted(() => {
         
         .price-box .amount {
             font-size: 16px;
+        }
+    }
+}
+</style>
+
+<style lang="scss">
+.search-suggestion-header {
+    font-size: 12px;
+    color: #999;
+    padding: 5px 10px;
+    background-color: #f5f7fa;
+    border-bottom: 1px solid #eee;
+    font-weight: bold;
+    pointer-events: none;
+    cursor: default;
+}
+
+.suggestion-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    
+    .delete-history {
+        color: #999;
+        cursor: pointer;
+        font-size: 12px;
+        margin-left: 10px;
+        &:hover {
+            color: #f56c6c;
         }
     }
 }

@@ -35,8 +35,7 @@
                             <el-rate v-model="v.pingfen" disabled show-score text-color="#ff9900" score-template="{value}"> </el-rate>
                         </span>
                         <span class="comment-time">{{ v.addtime.substr(0, 10) }}</span>
-                        <router-link v-if="isReply" :to="buildReplyLink(v)">回复</router-link>
-                        <router-link v-if="isReply" class="comment-quote-link" :to="buildQuoteLink(v)">引用回复</router-link>
+                        <a href="javascript:;" v-if="isReply" @click="toggleReply(v.id)" style="margin-left: 8px; font-size: 12px; color: var(--theme-primary-color);">回复</a>
                         <el-button class="comment-report-btn" link @click="openReport(v)">举报</el-button>
                     </p>
                     <div class="comment-content J_CommentContent">{{ v.pinglunneirong }}</div>
@@ -57,7 +56,17 @@
 
 
                     </div>
-                    <reply-list v-if="isReply" :commitid="v.id"></reply-list>
+                    
+                    <!-- Inline Reply Form -->
+                    <div v-if="replyingToId === v.id" class="inline-reply-box" style="margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 4px;">
+                        <el-input type="textarea" v-model="replyContent" :rows="2" placeholder="写下你的回复..."></el-input>
+                        <div style="margin-top: 8px; text-align: right;">
+                            <el-button size="small" @click="cancelReply">取消</el-button>
+                            <el-button type="primary" size="small" @click="submitReply(v)">发表回复</el-button>
+                        </div>
+                    </div>
+
+                    <reply-list v-if="isReply" :commitid="v.id" :ref="'replyList_' + v.id"></reply-list>
                 </div>
             </div>
         </div>
@@ -131,7 +140,7 @@
     import ReplyList from "@/components/comments/replyList";
     import ReportDialog from "@/components/report/ReportDialog.vue";
     import defaultHeadimg from "./asset/default.gif";
-    import { canPinglunInsert } from "@/module";
+    import { canPinglunInsert, canPinglunhuifuInsert } from "@/module";
 
     export default {
         name: "e-comments",
@@ -149,6 +158,8 @@
                 defaultHeadimg: defaultHeadimg,
                 reportVisible: false,
                 reportTarget: {},
+                replyingToId: null,
+                replyContent: "",
             };
         },
         props: {
@@ -167,21 +178,50 @@
         watch: {},
         computed: {},
         methods: {
-            buildReplyLink(row) {
-                return { path: "/pinglunhuifu/add", query: { id: row.id } };
+            toggleReply(id) {
+                if (this.replyingToId === id) {
+                    this.replyingToId = null;
+                } else {
+                    this.replyingToId = id;
+                    this.replyContent = "";
+                }
             },
-            buildQuoteLink(row) {
-                const raw = row?.pinglunneirong ? String(row.pinglunneirong) : "";
-                const quote = raw.replace(/\s+/g, " ").trim().slice(0, 60);
-                const replyTo = row?.[this.name] || row?.pinglunren || "";
-                return {
-                    path: "/pinglunhuifu/add",
-                    query: {
-                        id: row.id,
-                        quote,
-                        replyTo,
-                    },
+            cancelReply() {
+                this.replyingToId = null;
+                this.replyContent = "";
+            },
+            submitReply(row) {
+                if (!this.replyContent.trim()) {
+                    this.$message.error("请输入回复内容");
+                    return;
+                }
+                const data = {
+                    pinglunid: row.id,
+                    pinglunneirong: row.pinglunneirong,
+                    pinglunren: row.pinglunren,
+                    huifuneirong: this.replyContent,
+                    huifuren: this.$session.username,
+                    biao: this.module,
+                    biaoid: this.$route.query.id,
+                    biaoti: this.biaoti
                 };
+                
+                canPinglunhuifuInsert(data).then(res => {
+                    if (res.code === 0) {
+                        this.$message.success("回复成功");
+                        this.replyingToId = null;
+                        this.replyContent = "";
+                        
+                        // Refresh the specific reply list
+                        const refName = 'replyList_' + row.id;
+                        const replyListComponent = this.$refs[refName];
+                        if (replyListComponent && replyListComponent[0]) {
+                            replyListComponent[0].loadReply();
+                        }
+                    } else {
+                        this.$message.error(res.msg);
+                    }
+                });
             },
             openReport(row) {
                 this.reportTarget = {

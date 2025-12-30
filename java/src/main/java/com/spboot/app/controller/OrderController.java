@@ -33,5 +33,17 @@ public class OrderController {
     public R<Object> list() {
         return orderService.listOrders();
     }
-}
 
+    @ApiOperation(value = "管理员：分页查看所有订单", httpMethod = "POST")
+    @RequestMapping("/admin/list")
+    public R<Object> adminList(@RequestBody Map<String, Object> req) {
+        return orderService.adminListOrders(req);
+    }
+
+    @ApiOperation(value = "管理员：更新订单状态", httpMethod = "POST")
+    @RequestMapping("/admin/updateStatus")
+    public R<Object> adminUpdateStatus(@RequestBody Map<String, Object> data) {
+        return orderService.adminUpdateStatus(data);
+    }
+
+}

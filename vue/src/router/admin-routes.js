@@ -419,4 +419,44 @@ export default [
         component: () => import("@/views/xiaoxi/updt.vue"),
         meta: { title: "编辑消息", authLogin: true },
     },
+    // 新增统计路由
+    {
+        path: "statistics",
+        name: "AdminStatistics",
+        component: () => import("@/views/statistics/index.vue"),
+        meta: { title: "数据统计", authLogin: true },
+    },
+    // 新增商城管理路由
+    {
+        path: "mall/product",
+        name: "AdminMallProduct",
+        component: () => import("@/views/mall/admin-product-list.vue"),
+        meta: { title: "商品管理", authLogin: true },
+    },
+    {
+        path: "mall/category",
+        name: "AdminMallCategory",
+        component: () => import("@/views/mall/category-list.vue"),
+        meta: { title: "分类管理", authLogin: true },
+    },
+    {
+        path: "mall/order",
+        name: "AdminMallOrder",
+        component: () => import("@/views/mall/admin-order-list.vue"),
+        meta: { title: "订单查看", authLogin: true },
+    },
+    // 新增话题管理路由
+    {
+        path: "topic/admin",
+        name: "AdminTopicList",
+        component: () => import("@/views/topic/admin-list.vue"),
+        meta: { title: "话题管理", authLogin: true },
+    },
+    // 新增举报管理路由
+    {
+        path: "report",
+        name: "AdminReportList",
+        component: () => import("@/views/report/list.vue"),
+        meta: { title: "举报处理", authLogin: true },
+    },
 ];

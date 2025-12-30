@@ -11,10 +11,8 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to, from) => {
-    //to.meta.login
     var user = useUserStore();
     if (to.meta.authLogin) {
-        // 需要验证登录
         if (!user.isLogin()) {
             if (to.meta.msg) {
                 await ElMessageBox.alert("尚未登录，请登录后操作");

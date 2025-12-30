@@ -21,6 +21,10 @@
                         <el-input type="text" placeholder="输入帐号" style="width: 450px" v-model="form.username" />
                     </el-form-item>
 
+                    <el-form-item label="密码" prop="pwd" required :rules="[{ required: true, message: '请填写密码' }]">
+                        <el-input type="text" placeholder="输入密码" style="width: 450px" v-model="form.pwd" />
+                    </el-form-item>
+
                     <el-form-item v-if="btnText">
                         <el-button type="primary" @click="submit">{{ btnText }}</el-button>
                     </el-form-item>

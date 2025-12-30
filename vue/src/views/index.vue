@@ -38,6 +38,16 @@
                                     </div>
                                     <el-empty v-if="bijilist.length === 0" description="暂无推荐笔记"></el-empty>
                                 </div>
+                                <div class="pagination-wrapper" v-if="recommendTotal > 0">
+                                    <el-pagination
+                                        background
+                                        layout="prev, pager, next"
+                                        :total="recommendTotal"
+                                        :page-size="pageSize"
+                                        :current-page="recommendPage"
+                                        @current-change="getRecommendData"
+                                    />
+                                </div>
                             </el-tab-pane>
                             <el-tab-pane label="关注" name="following">
                                 <div class="note-list">
@@ -60,6 +70,16 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="pagination-wrapper" v-if="followTotal > 0">
+                                    <el-pagination
+                                        background
+                                        layout="prev, pager, next"
+                                        :total="followTotal"
+                                        :page-size="pageSize"
+                                        :current-page="followPage"
+                                        @current-change="getFollowData"
+                                    />
+                                </div>
                             </el-tab-pane>
                             <el-tab-pane label="热门" name="hot">
                                 <div class="note-list">
@@ -79,6 +99,16 @@
                                         </div>
                                     </div>
                                     <el-empty v-if="bijilist2.length === 0" description="暂无热门笔记"></el-empty>
+                                </div>
+                                <div class="pagination-wrapper" v-if="hotTotal > 0">
+                                    <el-pagination
+                                        background
+                                        layout="prev, pager, next"
+                                        :total="hotTotal"
+                                        :page-size="pageSize"
+                                        :current-page="hotPage"
+                                        @current-change="loadHotNotes"
+                                    />
                                 </div>
                             </el-tab-pane>
                         </el-tabs>
@@ -162,6 +192,15 @@ import { session } from "@/utils/utils";
 const route = useRoute();
 const activeTab = ref('recommend');
 
+// Pagination state
+const pageSize = 10;
+const recommendPage = ref(1);
+const recommendTotal = ref(0);
+const followPage = ref(1);
+const followTotal = ref(0);
+const hotPage = ref(1);
+const hotTotal = ref(0);
+
 // 获取游戏列表 (用于轮播图和侧边栏)
 const youxiList = DB.name("youxi").order("id desc").limit(5).selectRef();
 
@@ -210,7 +249,7 @@ const loadProducts = async () => {
                 console.warn("尝试加载 product_images 失败，可能表不存在", err);
             }
             
-            productList.value = records;
+            productList.value = records.slice(0, 5);
         }
     } catch (e) {
         console.error("加载周边失败", e);
@@ -319,33 +358,38 @@ const fetchLikeCounts = async (list) => {
 };
 
 // 调用后端推荐接口获取个性化推荐笔记
-const getRecommendData = async () => {
+const getRecommendData = async (page = 1) => {
+    recommendPage.value = page;
     try {
-        const res = await http.get('/api/biji/recommendByUserTagsAndGames');
+        const res = await http.get('/api/biji/recommendByUserTagsAndGames', { page, pagesize: pageSize });
         if (res.code === 0) {
-            bijilist.value = res.data.list || [];
+            if (res.data.list) {
+                bijilist.value = res.data.list;
+                recommendTotal.value = res.data.total || 0;
+            } else if (res.data.records) {
+                bijilist.value = res.data.records;
+                recommendTotal.value = res.data.total || 0;
+            } else {
+                bijilist.value = Array.isArray(res.data) ? res.data : [];
+                recommendTotal.value = bijilist.value.length;
+            }
             await fetchAuthorNames(bijilist.value);
             await fetchLikeCounts(bijilist.value);
         } else {
-            // 如果推荐获取失败，回退到默认的笔记列表
-            const data = await DB.name("biji")
-                .alias("a")
-                .joinLeft("yonghu b", "a.tianjiaren=b.zhanghao")
-                .field("a.*,b.mingcheng as authorName")
-                .where("a.issh", "是")
-                .order("a.id desc")
-                .select();
-            bijilist.value = data;
-            await fetchLikeCounts(bijilist.value);
+            throw new Error("API failed");
         }
     } catch (error) {
         // 如果调用失败，回退到默认的笔记列表
+        const count = await DB.name("biji").where("issh", "是").count();
+        recommendTotal.value = count;
+
         const data = await DB.name("biji")
             .alias("a")
             .joinLeft("yonghu b", "a.tianjiaren=b.zhanghao")
             .field("a.*,b.mingcheng as authorName")
             .where("a.issh", "是")
             .order("a.id desc")
+            .limit((page - 1) * pageSize, pageSize)
             .select();
         bijilist.value = data;
         await fetchLikeCounts(bijilist.value);
@@ -358,7 +402,8 @@ const getRecommendData = async () => {
  */
 const bijilist1 = ref([]);
 
-const getFollowData = async () => {
+const getFollowData = async (page = 1) => {
+    followPage.value = page;
     const username = session('username');
     if (username) {
         try {
@@ -375,6 +420,13 @@ const getFollowData = async () => {
 
             if (followList.length > 0) {
                 const followees = followList.map(r => r.followee);
+                
+                const count = await DB.name("biji")
+                    .where("issh", "是")
+                    .where("tianjiaren", "in", followees)
+                    .count();
+                followTotal.value = count;
+
                 // 获取这些用户的笔记
                 const data = await DB.name("biji")
                     .alias("a")
@@ -383,18 +435,22 @@ const getFollowData = async () => {
                     .where("a.issh", "是")
                     .where("a.tianjiaren", "in", followees)
                     .order("a.id desc")
+                    .limit((page - 1) * pageSize, pageSize)
                     .select();
                 bijilist1.value = data;
                 await fetchLikeCounts(bijilist1.value);
             } else {
                 bijilist1.value = [];
+                followTotal.value = 0;
             }
         } catch (e) {
             console.error(e);
             bijilist1.value = [];
+            followTotal.value = 0;
         }
     } else {
         bijilist1.value = [];
+        followTotal.value = 0;
     }
 };
 
@@ -403,13 +459,18 @@ const getFollowData = async () => {
  * @type {UnwrapNestedRefs<EBiji[]>}
  */
 const bijilist2 = ref([]);
-const loadHotNotes = async () => {
+const loadHotNotes = async (page = 1) => {
+    hotPage.value = page;
+    const count = await DB.name("biji").where("issh", "是").count();
+    hotTotal.value = count;
+
     const data = await DB.name("biji")
         .alias("a")
         .joinLeft("yonghu b", "a.tianjiaren=b.zhanghao")
         .field("a.*,b.mingcheng as authorName")
         .where("a.issh", "是")
         .order("a.zhongcaodu desc")
+        .limit((page - 1) * pageSize, pageSize)
         .select();
     bijilist2.value = data;
     await fetchZhongcaoCounts(bijilist2.value);
@@ -526,6 +587,12 @@ onMounted(() => {
         text-align: center;
         padding: 40px;
         color: #999;
+    }
+
+    .pagination-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
     }
 }
 

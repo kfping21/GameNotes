@@ -50,17 +50,25 @@
             />
             <el-button type="primary" @click="submitDiscussion" style="margin-top: 10px;">发布讨论</el-button>
           </div>
-          <div v-for="discussion in discussions" :key="discussion.id" class="discussion-item">
-            <div class="discussion-meta">
-              <span class="user">用户{{ discussion.createdBy }}</span>
-              <span class="time">{{ discussion.createdAt }}</span>
+          <div class="discussion-list">
+            <div v-for="item in discussions" :key="item.id" class="discussion-item">
+              <div class="discussion-avatar">
+                  <e-img :src="item.creatorAvatar" v-if="item.creatorAvatar" class="avatar-img" />
+                  <img src="@/components/comments/asset/default.gif" v-else class="avatar-img" />
+              </div>
+              <div class="discussion-main">
+                  <div class="discussion-meta">
+                    <span class="user">{{ item.creatorName || '用户' + item.createdBy }}</span>
+                    <span class="time">{{ item.createdAt }}</span>
+                  </div>
+                  <div class="discussion-content">{{ item.content }}</div>
+                  <div class="discussion-actions">
+                      <el-button type="danger" link size="small" @click="openReportDiscussion(item)">举报</el-button>
+                  </div>
+              </div>
             </div>
-            <div class="discussion-content">{{ discussion.content }}</div>
-            <div class="discussion-actions">
-              <el-button link type="danger" size="small" @click="openReportDiscussion(discussion)">举报</el-button>
-            </div>
+            <div v-if="discussions.length === 0" class="empty-tip">暂无讨论，快来抢沙发吧~</div>
           </div>
-          <div v-if="discussions.length === 0" class="empty-tip">暂无讨论</div>
         </div>
 
         <!-- 笔记列表 -->
@@ -104,7 +112,7 @@
             <div class="message-list" ref="msgListRef">
               <div v-for="msg in messages" :key="msg.id" class="message-item" :class="{ 'my-msg': userStore.session && msg.senderId == userStore.session.id }">
                 <div class="msg-info">
-                    <span class="sender" v-if="!userStore.session || msg.senderId != userStore.session.id">用户{{ msg.senderId }}</span>
+                    <span class="sender">{{ msg.senderName || '用户' + msg.senderId }}</span>
                     <span class="time">{{ msg.createdAt }}</span>
                 </div>
                 <div class="content">{{ msg.content }}</div>
@@ -158,6 +166,7 @@ import {
 import { useUserStore } from "@/stores";
 import { ElMessage } from "element-plus";
 import config from "@/config";
+import DB from "@/utils/db";
 import ReportDialog from "@/components/report/ReportDialog.vue";
 import { pushHistory } from "@/utils/history";
 
@@ -239,7 +248,26 @@ const fetchDetail = async () => {
     }
 
     if (discussionRes.code === 0 || discussionRes.code === "0") {
-      discussions.value = discussionRes.data.lists || [];
+      let list = discussionRes.data.lists || [];
+      // Fetch user info for discussions
+      const userIds = [...new Set(list.map(d => d.createdBy))];
+      if (userIds.length > 0) {
+          try {
+              const users = await DB.name("yonghu").where("id", "in", userIds).select();
+              const userMap = {};
+              users.forEach(u => {
+                  userMap[u.id] = u;
+              });
+              list = list.map(d => ({
+                  ...d,
+                  creatorName: userMap[d.createdBy]?.mingcheng || userMap[d.createdBy]?.zhanghao || `用户${d.createdBy}`,
+                  creatorAvatar: userMap[d.createdBy]?.touxiang || ''
+              }));
+          } catch (e) {
+              console.error("Failed to fetch user info for discussions", e);
+          }
+      }
+      discussions.value = list;
     }
 
     if (noteRes.code === 0 || noteRes.code === "0") {
@@ -355,10 +383,20 @@ const initWebSocket = () => {
         }
     };
     
-    ws.onmessage = (event) => {
+    ws.onmessage = async (event) => {
         try {
             const data = JSON.parse(event.data);
             if (currentRoom.value && data.roomId == currentRoom.value.id) {
+                if (!data.senderName && data.senderId) {
+                    try {
+                        const user = await DB.name("yonghu").find(data.senderId);
+                        if (user) {
+                            data.senderName = user.mingcheng || user.zhanghao;
+                        }
+                    } catch (e) {
+                        // ignore
+                    }
+                }
                 messages.value.push(data);
                 scrollToBottom();
             }
@@ -406,7 +444,28 @@ const fetchMessages = async (roomId) => {
   try {
     const res = await getChatMessages(roomId);
     if (res.code === 0 || res.code === "0") {
-      messages.value = res.data || [];
+      let msgs = res.data || [];
+      
+      // Fetch user info for these messages
+      const senderIds = [...new Set(msgs.map(m => m.senderId))];
+      if (senderIds.length > 0) {
+          try {
+              const users = await DB.name("yonghu").where("id", "in", senderIds).select();
+              const userMap = {};
+              users.forEach(u => {
+                  userMap[u.id] = u.mingcheng || u.zhanghao;
+              });
+              
+              msgs = msgs.map(m => ({
+                  ...m,
+                  senderName: userMap[m.senderId] || `用户${m.senderId}`
+              }));
+          } catch (e) {
+              console.error("Failed to fetch user info", e);
+          }
+      }
+      
+      messages.value = msgs;
       scrollToBottom();
     }
   } catch (error) {
@@ -433,6 +492,7 @@ const sendMessage = async () => {
           id: Date.now(),
           roomId: currentRoom.value.id,
           senderId: userStore.session.id,
+          senderName: userStore.session.mingcheng || userStore.session.username,
           content: inputMsg.value,
           createdAt: new Date().toLocaleString(),
       });
@@ -589,19 +649,45 @@ onBeforeUnmount(() => {
   .discussion-item {
     background: var(--theme-surface-color);
     transition: background-color 0.3s;
+    display: flex;
+    gap: 15px;
+    padding: 20px 0;
+    border-bottom: 1px solid #f0f0f0;
+
     &:hover {
       background-color: #fafafa;
     }
+
+    .discussion-avatar {
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        overflow: hidden;
+        background: #f0f0f0;
+        
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    }
+
+    .discussion-main {
+        flex: 1;
+    }
+
     .discussion-meta {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       font-size: 12px;
       color: #999;
       
       .user {
-        color: var(--theme-primary-color);
-        font-weight: 500;
+        color: #333;
+        font-weight: 600;
+        font-size: 14px;
       }
     }
     .discussion-content {
@@ -609,9 +695,10 @@ onBeforeUnmount(() => {
       line-height: 1.6;
       color: #333;
       white-space: pre-wrap;
+      margin-bottom: 8px;
     }
     .discussion-actions {
-      margin-top: 8px;
+      margin-top: 0;
     }
   }
 
@@ -647,16 +734,54 @@ onBeforeUnmount(() => {
     .message-list {
       flex: 1;
       overflow-y: auto;
-      padding: 10px;
-      background: var(--theme-surface-muted);
+      padding: 20px;
+      background: #f5f5f5;
       border-radius: 4px;
       margin-bottom: 10px;
       
       .message-item {
-        margin-bottom: 10px;
-        .sender {
-          font-weight: bold;
-          margin-right: 5px;
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+
+        .msg-info {
+            margin-bottom: 6px;
+            font-size: 12px;
+            color: #999;
+            
+            .sender {
+                color: #666;
+                margin-right: 8px;
+            }
+        }
+
+        .content {
+            padding: 10px 15px;
+            background: #fff;
+            border-radius: 0 12px 12px 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            max-width: 70%;
+            word-break: break-word;
+            line-height: 1.5;
+            position: relative;
+        }
+
+        &.my-msg {
+            align-items: flex-end;
+
+            .msg-info {
+                text-align: right;
+                .sender {
+                    margin-right: 0;
+                    margin-left: 8px;
+                }
+            }
+
+            .content {
+                background: #95ec69;
+                border-radius: 12px 0 12px 12px;
+            }
         }
       }
     }

@@ -45,7 +45,10 @@
                                         </div>
                                         <div v-if="map.wozaiwan">
                                             <span class="name"> 我在玩： </span>
-                                            <span class="val"> <e-select-view module="youxi" :value="map.wozaiwan" select="id" show="youximingcheng"></e-select-view> </span>
+                                            <span class="val"> 
+                                                <!-- Debug: {{ map.wozaiwan }} -->
+                                                <e-select-view module="youxi" :value="map.wozaiwan" select="id" show="youximingcheng"></e-select-view> 
+                                            </span>
                                         </div>
 
 
@@ -328,35 +331,38 @@
     const getGameRelatedNotes = async () => {
         if (map.wozaiwan) {
             // 解析用户"我在玩"字段，支持多种分隔符
-            const gameNames = map.wozaiwan.split(/[,，;；|]/).filter(name => name.trim() !== '');
+            let gameIds = [];
+            const val = map.wozaiwan;
+            if (typeof val === 'string') {
+                gameIds = val.split(/[,，;；|]/).filter(id => id.trim() !== '');
+            } else if (typeof val === 'number') {
+                gameIds = [val];
+            } else if (Array.isArray(val)) {
+                gameIds = val;
+            }
 
-            if (gameNames.length > 0) {
+            if (gameIds.length > 0) {
                 // 构建查询条件，查找与这些游戏相关的笔记
                 const allNotes = [];
 
-                // 为每个游戏查找相关笔记
-                for (const gameName of gameNames) {
-                    if (gameName.trim() !== '') {
-                        // 先查找游戏的ID
-                        const games = await DB.name("youxi")
-                            .where("youximingcheng", "LIKE", `%${gameName.trim()}%`)
-                            .select();
+                // 查找对应的游戏信息
+                const games = await DB.name("youxi")
+                    .where("id", "in", gameIds)
+                    .select();
 
-                        // 根据游戏ID查找相关笔记
-                        for (const game of games) {
-                            const notes = await DB.name("biji")
-                                .where("guanlianyouxi", "=", game.id)
-                                .where("issh", "=", "是")
-                                .limit("2") // 每个游戏最多2个笔记
-                                .order("id desc")
-                                .select();
+                // 根据游戏ID查找相关笔记
+                for (const game of games) {
+                    const notes = await DB.name("biji")
+                        .where("guanlianyouxi", "=", game.id)
+                        .where("issh", "=", "是")
+                        .limit("2") // 每个游戏最多2个笔记
+                        .order("id desc")
+                        .select();
 
-                            // 确保不会重复添加相同的笔记
-                            for (const note of notes) {
-                                if (!allNotes.some(n => n.id === note.id)) {
-                                    allNotes.push(note);
-                                }
-                            }
+                    // 确保不会重复添加相同的笔记
+                    for (const note of notes) {
+                        if (!allNotes.some(n => n.id === note.id)) {
+                            allNotes.push(note);
                         }
                     }
                 }

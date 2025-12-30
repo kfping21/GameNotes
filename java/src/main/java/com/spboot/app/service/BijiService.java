@@ -160,7 +160,22 @@ public class BijiService {
             wrapper.like("bijimingcheng", map.get("bijimingcheng"));
         }
         if (!StringUtil.isNullOrEmpty(map.get("biaoqian"))) {
-            wrapper.like("biaoqian", map.get("biaoqian"));
+            // 数据库字段 biji.biaoqian 存储的是标签名称（TEXT），但前端有时会传标签 id
+            // 这里兼容：如果传的是纯数字，则先查 biaoqian 表拿到名称再筛选
+            String tagValue = String.valueOf(map.get("biaoqian"));
+            try {
+                if (tagValue != null) tagValue = tagValue.trim();
+                if (tagValue != null && tagValue.matches("^\\d+$")) {
+                    Map<String, Object> tag = DB.name("biaoqian").find(Integer.parseInt(tagValue));
+                    if (tag != null && tag.get("biaoqianmingcheng") != null) {
+                        tagValue = String.valueOf(tag.get("biaoqianmingcheng"));
+                    }
+                }
+            } catch (Exception ignore) {
+            }
+            if (!StringUtil.isNullOrEmpty(tagValue)) {
+                wrapper.like("biaoqian", tagValue);
+            }
         }
         if (!StringUtil.isNullOrEmpty(map.get("guanlianyouxi"))) {
             wrapper.eq("guanlianyouxi", map.get("guanlianyouxi"));

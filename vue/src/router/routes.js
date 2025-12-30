@@ -30,7 +30,7 @@ const routes = [
         path: "/admin",
         name: "Admin",
         component: () => import("@/views/admin/index.vue"),
-        redirect: "/login",
+        redirect: "/admin/sy",
         meta: { title: "后台管理", authLogin: true },
         children: [
             {

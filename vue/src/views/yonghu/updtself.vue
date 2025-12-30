@@ -90,7 +90,7 @@
             default: "140px",
         },
     });
-    const form = useYonghuFindById(props.id);
+    const form = useYonghuFindById(props.id || session("id"));
     const emit = defineEmits(["success"]);
     const formModel = ref();
     const loading = ref(false);
@@ -126,7 +126,7 @@
     const biaoqian = computed({
         get() {
             if (form.biaoqian) {
-                return form.biaoqian.split(",").filter((s) => s);
+                return form.biaoqian.split(",").filter((s) => s).map(s => isNaN(s) ? s : Number(s));
             }
             return [];
         },
@@ -137,7 +137,7 @@
     const wozaiwan = computed({
         get() {
             if (form.wozaiwan) {
-                return form.wozaiwan.split(",").filter((s) => s);
+                return form.wozaiwan.split(",").filter((s) => s).map(s => isNaN(s) ? s : Number(s));
             }
             return [];
         },

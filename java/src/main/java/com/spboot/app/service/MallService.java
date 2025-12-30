@@ -93,4 +93,107 @@ public class MallService {
             return R.error("查询失败");
         }
     }
+
+    // --- Admin functions (minimal implementations) ---
+
+    public R<Object> insertProduct(Product product, Map<String, Object> data) {
+        try {
+            product.setId(null);
+            productMapper.insert(product);
+            // handle images if provided
+            if (data.get("images") instanceof java.util.List) {
+                java.util.List imgs = (java.util.List) data.get("images");
+                int sort = 0;
+                for (Object o : imgs) {
+                    String url = String.valueOf(o);
+                    com.spboot.app.pojo.ProductImage pi = new com.spboot.app.pojo.ProductImage();
+                    pi.setProductId(product.getId());
+                    pi.setUrl(url);
+                    pi.setSort(sort++);
+                    productImageMapper.insert(pi);
+                }
+            }
+            return R.success(product);
+        } catch (Exception e) {
+            return R.error("插入商品失败");
+        }
+    }
+
+    public R<Object> updateProduct(Product product, Map<String, Object> data) {
+        try {
+            if (product.getId() == null) return R.error("缺少 id");
+            productMapper.updateById(product);
+            // update images if provided: delete old and insert new
+            if (data.get("images") instanceof java.util.List) {
+                productImageMapper.delete(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.spboot.app.pojo.ProductImage>().eq("product_id", product.getId()));
+                java.util.List imgs = (java.util.List) data.get("images");
+                int sort = 0;
+                for (Object o : imgs) {
+                    String url = String.valueOf(o);
+                    com.spboot.app.pojo.ProductImage pi = new com.spboot.app.pojo.ProductImage();
+                    pi.setProductId(product.getId());
+                    pi.setUrl(url);
+                    pi.setSort(sort++);
+                    productImageMapper.insert(pi);
+                }
+            }
+            return R.success(product);
+        } catch (Exception e) {
+            return R.error("更新商品失败");
+        }
+    }
+
+    public R<Object> deleteProducts(java.util.List<Integer> ids) {
+        try {
+            for (Integer id : ids) {
+                productMapper.deleteById(id);
+                productImageMapper.delete(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.spboot.app.pojo.ProductImage>().eq("product_id", id));
+            }
+            return R.success("删除成功");
+        } catch (Exception e) {
+            return R.error("删除失败");
+        }
+    }
+
+    public R<Object> updateStock(Integer productId, Integer stock) {
+        if (productId == null) return R.error("缺少 productId");
+        Product p = productMapper.selectById(productId);
+        if (p == null) return R.error("未找到商品");
+        p.setStock(stock == null ? 0 : stock);
+        productMapper.updateById(p);
+        return R.success(p);
+    }
+
+    public R<java.util.List<ProductCategory>> listCategories() {
+        return R.success(productCategoryMapper.selectList(null));
+    }
+
+    public R<Object> insertCategory(ProductCategory category, Map<String, Object> data) {
+        try {
+            category.setId(null);
+            productCategoryMapper.insert(category);
+            return R.success(category);
+        } catch (Exception e) {
+            return R.error("插入分类失败");
+        }
+    }
+
+    public R<Object> updateCategory(ProductCategory category, Map<String, Object> data) {
+        try {
+            if (category.getId() == null) return R.error("缺少 id");
+            productCategoryMapper.updateById(category);
+            return R.success(category);
+        } catch (Exception e) {
+            return R.error("更新分类失败");
+        }
+    }
+
+    public R<Object> deleteCategories(java.util.List<Integer> ids) {
+        try {
+            for (Integer id : ids) productCategoryMapper.deleteById(id);
+            return R.success("删除成功");
+        } catch (Exception e) {
+            return R.error("删除失败");
+        }
+    }
 }

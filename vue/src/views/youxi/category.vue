@@ -35,10 +35,16 @@
                                         style="width: 100%"
                                     >
                                         <template #default="{ item }">
-                                            <div class="suggestion-item">
+                                            <div v-if="item.type === 'header'" class="search-suggestion-header" @click.stop>
+                                                <span>{{ item.value }}</span>
+                                            </div>
+                                            <div v-else class="suggestion-item">
                                                 <span v-if="item.type === 'history'" style="color: #909399; margin-right: 8px;"><i class="fa fa-history"></i></span>
                                                 <span v-else style="color: #f56c6c; margin-right: 8px;"><i class="fa fa-fire"></i></span>
-                                                <span>{{ item.value }}</span>
+                                                <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item.value }}</span>
+                                                <span v-if="item.type === 'history'" class="delete-history" @click.stop="deleteHistoryItem(item)">
+                                                    <el-icon><Close /></el-icon>
+                                                </span>
                                             </div>
                                         </template>
                                         <template #append>
@@ -91,7 +97,7 @@
     import { useRoute } from "vue-router";
     import { extend } from "@/utils/extend";
     import { ElMessage } from "element-plus";
-    import { Search } from '@element-plus/icons-vue';
+    import { Search, Close } from '@element-plus/icons-vue';
 
     const route = useRoute();
     const currentTab = ref('recommend'); // recommend, more, category
@@ -230,14 +236,13 @@
     };
 
     const getRandomHotSearches = () => {
-        const pool = ['王者荣耀', '原神', '英雄联盟', '绝地求生', '我的世界', '和平精英', 'Apex英雄', 'CS:GO', 'DOTA2', '永劫无间'];
-        return pool.sort(() => 0.5 - Math.random()).slice(0, 5).map(item => ({ value: item, type: 'hot' }));
+        const pool = ['王者荣耀', '原神', '崩坏：星穹铁道', '逆水寒', '永劫无间手游', '黑神话：悟空', '只狼', '艾尔登法环', '黑暗之魂3', '鬼泣', '明末：渊虚之羽', '巫师3', '最终幻想14', '生化危机8', '博德之门3', '战神5'];
+        return pool.sort(() => 0.5 - Math.random()).slice(0, 3);
     };
 
     const getHistory = () => {
         try {
-            const history = JSON.parse(localStorage.getItem('game_search_history') || '[]');
-            return history.map(item => ({ value: item, type: 'history' }));
+            return JSON.parse(localStorage.getItem('game_search_history') || '[]');
         } catch (e) {
             return [];
         }
@@ -256,26 +261,51 @@
         }
     };
 
+    let lastSearchCallback = null;
+
+    const deleteHistoryItem = (item) => {
+        try {
+            let history = JSON.parse(localStorage.getItem('game_search_history') || '[]');
+            history = history.filter(h => h !== item.value);
+            localStorage.setItem('game_search_history', JSON.stringify(history));
+            if (lastSearchCallback) {
+                querySearch(search.keyword, lastSearchCallback);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     const querySearch = (queryString, cb) => {
+        lastSearchCallback = cb;
         let results = [];
+        const history = getHistory();
+        
         if (!queryString) {
-            const history = getHistory();
-            if (history.length > 0) {
-                results = history;
-            } else {
-                results = getRandomHotSearches();
+            // 历史记录
+            const historyItems = history.slice(0, 3).map(item => ({ value: item, type: 'history' }));
+            if (historyItems.length > 0) {
+                results.push({ value: '历史搜索', type: 'header' });
+                results.push(...historyItems);
+            }
+
+            // 热门推荐
+            const hotItems = getRandomHotSearches().map(item => ({ value: item, type: 'hot' }));
+            if (hotItems.length > 0) {
+                results.push({ value: '热门推荐', type: 'header' });
+                results.push(...hotItems);
             }
         } else {
-            const history = getHistory();
-            results = history.filter(item => item.value.toLowerCase().includes(queryString.toLowerCase()));
-            if (results.length === 0) {
-                results = getRandomHotSearches().filter(item => item.value.toLowerCase().includes(queryString.toLowerCase()));
-            }
+            const historyItems = history.filter(item => item.toLowerCase().includes(queryString.toLowerCase()))
+                .slice(0, 10)
+                .map(item => ({ value: item, type: 'history' }));
+            results = historyItems;
         }
         cb(results);
     };
 
     const handleSelect = (item) => {
+        if (item.type === 'header') return;
         search.keyword = item.value;
         searchSubmit(1);
     };
@@ -358,5 +388,34 @@
             }
         }
     }
+</style>
+
+<style lang="scss">
+.search-suggestion-header {
+    font-size: 12px;
+    color: #999;
+    padding: 5px 10px;
+    background-color: #f5f7fa;
+    border-bottom: 1px solid #eee;
+    font-weight: bold;
+    pointer-events: none;
+    cursor: default;
+}
+
+.suggestion-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    
+    .delete-history {
+        color: #999;
+        cursor: pointer;
+        font-size: 12px;
+        margin-left: 10px;
+        &:hover {
+            color: #f56c6c;
+        }
+    }
+}
 </style>
 

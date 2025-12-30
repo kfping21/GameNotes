@@ -74,3 +74,4 @@ public class AdminsController {
         return adminsService.delete(id);
     }
 }
+

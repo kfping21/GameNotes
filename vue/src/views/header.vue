@@ -31,31 +31,42 @@
 
                 <template v-if="$session.username">
                     <div class="line"></div>
-                    <div class="link header-shortcut">
-                        <router-link class="action-btn" to="/history">浏览历史</router-link>
-                    </div>
-                    <div class="link header-shortcut">
-                        <router-link class="action-btn" to="/my/activity">我的收藏与点赞</router-link>
-                    </div>
-                    <div class="link header-shortcut">
-                        <router-link class="action-btn" to="/my/dashboard">数据看板</router-link>
-                    </div>
-                    <div class="link header-shortcut">
-                        <router-link class="action-btn" to="/my/growth">成长中心</router-link>
-                    </div>
-                    <div class="line"></div>
-                    <div class="link user-link">
-                        <el-dropdown>
-                            <a href="javascript:;" class="action-btn user-trigger"> {{ $session.username }}，{{ $session.cx }} </a>
-                            <template #dropdown>
-                                <el-dropdown-menu>
-                                    <el-dropdown-item @click="$router.push('/my/profile')">我的主页</el-dropdown-item>
-                                    <el-dropdown-item @click="$router.push('/admin/sy')">个人中心</el-dropdown-item>
-                                    <el-dropdown-item @click="logout">退出</el-dropdown-item>
-                                </el-dropdown-menu>
-                            </template>
-                        </el-dropdown>
-                    </div>
+                    <template v-if="isAdmin">
+                        <div class="link user-link">
+                            <span class="action-btn user-trigger"> {{ $session.mingcheng || $session.username }}，你好 </span>
+                        </div>
+                        <div class="line"></div>
+                        <div class="link header-shortcut">
+                            <router-link class="action-btn" to="/admin/sy">管理后台</router-link>
+                        </div>
+                        <div class="line"></div>
+                        <div class="link header-shortcut">
+                            <a class="action-btn" href="javascript:;" @click="logout">退出</a>
+                        </div>
+                    </template>
+                    <template v-else>
+                        <div class="link header-shortcut">
+                            <router-link class="action-btn" to="/history">浏览历史</router-link>
+                        </div>
+                        <div class="link header-shortcut">
+                            <router-link class="action-btn" to="/my/dashboard">数据看板</router-link>
+                        </div>
+                        <div class="link header-shortcut">
+                            <router-link class="action-btn" to="/my/growth">成长中心</router-link>
+                        </div>
+                        <div class="line"></div>
+                        <div class="link user-link">
+                            <el-dropdown>
+                                <a href="javascript:;" class="action-btn user-trigger"> {{ $session.mingcheng || $session.username }}，你好 </a>
+                                <template #dropdown>
+                                    <el-dropdown-menu>
+                                        <el-dropdown-item @click="$router.push('/my/profile')">我的主页</el-dropdown-item>
+                                        <el-dropdown-item @click="logout">退出</el-dropdown-item>
+                                    </el-dropdown-menu>
+                                </template>
+                            </el-dropdown>
+                        </div>
+                    </template>
                 </template>
                 <template v-else>
                     <div class="line"></div>
@@ -151,6 +162,12 @@
 
     const isShowLogin = ref(false);
     const isShowReg = ref(false);
+
+    const isAdmin = computed(() => {
+        const cx = (session("cx") || "").toString().trim();
+        const lower = cx.toLowerCase();
+        return cx === "管理员" || lower === "admin" || lower === "administrator" || lower === "superadmin" || cx.indexOf("管理员") !== -1;
+    });
 
     const loginBoxRef = ref(null);
     const captchaUrl = ref("");
@@ -269,9 +286,13 @@
         z-index: 999;
         border-bottom: 1px solid #eeeeee;
         --header-main-color: var(--theme-primary-color, #1cb19c);
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
 
         .logo {
-            float: left;
+            
         }
 
         .logo1 {
@@ -287,13 +308,15 @@
         }
 
         .nav {
-            float: left;
             margin-left: 50px;
+            flex: 1;
+            display: flex;
+            align-items: center;
 
             li {
                 margin-right: 40px;
-                float: left;
                 position: relative;
+                flex-shrink: 0;
 
                 > a {
                     display: block;
@@ -363,8 +386,6 @@
         }
 
         .right {
-            float: right;
-            margin-top: 35px;
             display: flex;
             align-items: center;
 
@@ -403,7 +424,7 @@
                     color: #777777;
                     margin: 0 6px;
                     position: relative;
-                    padding: 5px 10px;
+                    padding: 3px 8px;
                     border: 1px solid var(--header-main-color);
                     border-radius: 10px;
                 }
@@ -412,10 +433,16 @@
                     display: inline-flex;
                     align-items: center;
                     font-size: 13px;
-                    padding: 7px 14px;
+                    padding: 4px 10px;
                     border-radius: 14px;
                     font-weight: 500;
                     color: var(--header-main-color);
+                    background: #fff;
+                    transition: all 0.3s;
+                    &:hover {
+                        background: var(--header-main-color);
+                        color: #fff;
+                    }
                 }
             }
 
@@ -429,13 +456,13 @@
             }
 
             .user-link .user-trigger {
-                font-size: 14px;
-                padding: 8px 18px;
-                border-radius: 18px;
+                font-size: 13px;
+                padding: 5px 12px;
+                border-radius: 15px;
                 color: #ffffff;
                 border: none;
                 background: linear-gradient(120deg, var(--header-main-color) 0%, #7aa7ff 100%);
-                box-shadow: 0 6px 14px rgba(71, 104, 230, 0.25);
+                box-shadow: 0 4px 10px rgba(71, 104, 230, 0.25);
             }
 
             .user-link .user-trigger:hover {

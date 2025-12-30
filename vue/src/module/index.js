@@ -13,3 +13,4 @@ export * from "./tongzhi";
 export * from "./guanzhu";
 export * from "./siliao";
 export * from "./xiaoxi";
+export * from "./topic_main";

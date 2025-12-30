@@ -14,6 +14,12 @@ export default [
         meta: { title: "用户详情" },
     },
     {
+        path: "yonghu/updtself",
+        name: "IndexyonghuUpdtSelf",
+        component: () => import("@/views/yonghu/updtself.vue"),
+        meta: { title: "修改个人资料", authLogin: true, msg: true },
+    },
+    {
         path: "shoucang/add",
         name: "IndexshoucangAdd",
         component: () => import("@/views/shoucang/add-web.vue"),
@@ -24,6 +30,19 @@ export default [
         name: "IndexdianzanAdd",
         component: () => import("@/views/dianzan/add-web.vue"),
         meta: { title: "点赞添加", authLogin: true, msg: true },
+    },
+    {
+        path: "biji/add",
+        name: "IndexbijiAdd",
+        component: () => import("@/views/biji/add.vue"),
+        meta: { title: "笔记添加", authLogin: true, msg: true },
+    },
+    {
+        path: "biji/updt",
+        name: "IndexbijiUpdt",
+        props: (route) => ({ id: route.query.id }),
+        component: () => import("@/views/biji/updt.vue"),
+        meta: { title: "笔记修改", authLogin: true, msg: true },
     },
     {
         path: "biji",

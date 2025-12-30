@@ -46,13 +46,7 @@
 
                     <el-form-item label="视频 " prop="shipin"> <e-upload-file v-model="form.shipin"></e-upload-file> </el-form-item>
 
-                    <el-form-item label="关注量 " prop="guanzhuliang" :rules="[{ validator: rule.checkNumber, message: '输入一个有效数字' }]"> <el-input type="number" placeholder="输入关注量" style="width: 450px" v-model.number="form.guanzhuliang" /> </el-form-item>
-
-                    <el-form-item label="种草度 " prop="zhongcaodu" :rules="[{ validator: rule.checkNumber, message: '输入一个有效数字' }]"> <el-input type="number" placeholder="输入种草度" style="width: 450px" v-model.number="form.zhongcaodu" /> </el-form-item>
-
                     <el-form-item label="详情 " prop="xiangqing"> <e-editor v-model="form.xiangqing" @getContent="getxiangqingContent"></e-editor> </el-form-item>
-
-                    <el-form-item label="添加人 " prop="tianjiaren"> <el-input v-model="form.tianjiaren" readonly style="width: 250px"></el-input> </el-form-item>
 
                     <el-form-item v-if="btnText">
                         <el-button type="primary" @click="submit">{{ btnText }}</el-button>
@@ -149,7 +143,7 @@
     const biaoqian = computed({
         get() {
             if (form.biaoqian) {
-                return form.biaoqian.split(",").filter((s) => s);
+                return form.biaoqian.split(",").filter((s) => s).map(s => isNaN(s) ? s : Number(s));
             }
             return [];
         },

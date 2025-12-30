@@ -21,7 +21,10 @@
                                                 @keyup.enter="searchSubmit"
                                             >
                                                 <template #default="{ item }">
-                                                    <div class="search-suggestion-item">
+                                                    <div v-if="item.type === 'header'" class="search-suggestion-header" @click.stop>
+                                                        <span>{{ item.value }}</span>
+                                                    </div>
+                                                    <div v-else class="search-suggestion-item">
                                                         <span class="suggestion-text">{{ item.value }}</span>
                                                         <span v-if="item.type === 'history'" class="delete-history" @click.stop="deleteHistoryItem(item)">
                                                             <el-icon><Close /></el-icon>
@@ -210,29 +213,48 @@
 
     // 搜索历史相关
     const querySearch = (queryString, cb) => {
+        lastSearchCallback = cb;
         const history = JSON.parse(localStorage.getItem('biji_search_history') || '[]');
         let results = [];
 
         if (queryString) {
             // 如果有输入，显示匹配的历史记录
             results = history.filter(item => item.toLowerCase().includes(queryString.toLowerCase()))
+                .slice(0, 10)
                 .map(item => ({ value: item, type: 'history' }));
         } else {
             // 如果没有输入，显示历史记录和热门搜索
-            const historyItems = history.map(item => ({ value: item, type: 'history' }));
+            
+            // 热门推荐 (放在前面或者后面，用户要求分开)
+            // 通常热门在下，历史在上，或者反过来。
+            // 附件图片显示的是混合的。
+            // 用户说 "推荐和历史分开"。
+            
+            // 历史记录
+            const historyItems = history.slice(0, 3).map(item => ({ value: item, type: 'history' }));
+            if (historyItems.length > 0) {
+                results.push({ value: '历史搜索', type: 'header' });
+                results.push(...historyItems);
+            }
+
+            // 热门推荐
             const hotItems = getRandomHotSearches().map(item => ({ value: item, type: 'hot' }));
-            results = [...historyItems, ...hotItems];
+            if (hotItems.length > 0) {
+                results.push({ value: '热门推荐', type: 'header' });
+                results.push(...hotItems);
+            }
         }
         cb(results);
     };
 
     const getRandomHotSearches = () => {
-        const hotPool = ['攻略', '心得', '测评', '教程', '分享', '推荐', '避雷', '日常'];
+        const hotPool = ['攻略', '心得', '测评', '教程', '分享', '推荐', '避雷', '日常', '游戏', '周边'];
         // 随机取3个
         return hotPool.sort(() => 0.5 - Math.random()).slice(0, 3);
     };
 
     const handleSelect = (item) => {
+        if (item.type === 'header') return;
         search.keyword = item.value;
         searchSubmit();
     };
@@ -248,11 +270,15 @@
         localStorage.setItem('biji_search_history', JSON.stringify(history));
     };
 
+    let lastSearchCallback = null;
+
     const deleteHistoryItem = (item) => {
         let history = JSON.parse(localStorage.getItem('biji_search_history') || '[]');
         history = history.filter(h => h !== item.value);
         localStorage.setItem('biji_search_history', JSON.stringify(history));
-        // 强制更新建议列表（通过重新聚焦或手动触发，这里简单处理，用户下次点击会生效）
+        if (lastSearchCallback) {
+            querySearch(search.keyword, lastSearchCallback);
+        }
     };
 
     const searchSubmit = (page = 1) => {
@@ -283,4 +309,44 @@
             margin-top: 15px;
         }
     }
+</style>
+
+<style lang="scss">
+.search-suggestion-header {
+    font-size: 12px;
+    color: #999;
+    padding: 5px 10px;
+    background-color: #f5f7fa;
+    border-bottom: 1px solid #eee;
+    font-weight: bold;
+    pointer-events: none;
+    cursor: default;
+}
+
+.search-suggestion-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    
+    .suggestion-text {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .delete-history {
+        color: #999;
+        cursor: pointer;
+        font-size: 12px;
+        &:hover {
+            color: #f56c6c;
+        }
+    }
+    
+    .hot-tag {
+        color: #f56c6c;
+    }
+}
 </style>

@@ -1,0 +1,278 @@
+项目数据库结构与后端接口文档
+生成日期：2025-12-23
+
+一、目标与说明
+- 本文档把项目中通过代码与 SQL 文件提取的数据库表结构（基于 POJO 映射）、后端 REST 接口清单、已发现的问题以及建议的修复 SQL/Mapper 模板整理在一个可用的文档中，便于直接交付给前端/DBA 使用。
+
+二、包含内容（本次写入）
+- 表清单（表名、字段、Java 字段名、建议 SQL 类型）
+- 后端接口清单（按 Controller 分组：路径、HTTP 方法、主要参数/请求体）
+- 已发现的问题与修复建议（含可复制的 SQL 与 mapper XML 模板）
+- 后续建议与下一步说明
+
+三、重要注意（请先阅读）
+- 我遵循你的要求：不随意改字段名，保留项目中 POJO 的原字段名和 @TableField 指定的列名。
+- 若需要我生成完整的可导入 SQL（CREATE TABLE + INSERT），请确认是否替换游戏名为热门 RPG，以及确认笔记标签仅使用四类：战力、探索、社交、PK。
+
+四、表结构（按 @TableName 列出，建议 SQL 类型仅供参考）
+
+1) 表：yonghu
+- id (Integer) — PK AUTO_INCREMENT
+- zhanghao (VARCHAR)
+- mima (VARCHAR)
+- mingcheng (VARCHAR)
+- xingbie (VARCHAR)
+- chushengriqi (VARCHAR)
+- shouji (VARCHAR)
+- youxiang (VARCHAR)
+- gexingqianming (VARCHAR)
+- biaoqian (VARCHAR)
+- wozaiwan (VARCHAR)
+- touxiang (VARCHAR)
+
+2) 表：youxi
+- id (Integer) — PK
+- youximingcheng (VARCHAR)
+- guanlianbiji (INT)
+- youxitupian (TEXT)
+- game_category_id (INT)  -- Java 字段 categoryId, 映射注解 @TableField("game_category_id")
+- xiangqing (TEXT)
+
+3) 表：topic_main
+- id (Integer) PK
+- title (VARCHAR)
+- intro (TEXT)
+- tagIds (VARCHAR) -- 存 tag id 列表
+- createdBy (INT)
+- status (VARCHAR)
+- createdAt (DATETIME)
+
+4) 表：topic_note_map
+- id (Integer) PK
+- topicId (INT)
+- noteId (INT)
+- createdAt (DATETIME)
+
+5) 表：topic_discussion
+- id (Integer) PK
+- topicId (INT)
+- content (TEXT)
+- createdBy (INT)
+- status (VARCHAR)
+- createdAt (DATETIME)
+
+6) 表：topic_chat_room
+- id (Integer) PK
+- topicMainId (INT)
+- name (VARCHAR)
+- ownerId (INT)
+- createdAt (DATETIME)
+
+7) 表：topic_chat_message
+- id (Integer) PK
+- roomId (INT)
+- senderId (INT)
+- content (TEXT)
+- createdAt (DATETIME)
+
+8) 表：zhongcao
+- id (Integer) PK
+- bijiid (INT)
+- bijibianhao (VARCHAR)
+- bijimingcheng (VARCHAR)
+- biaoqian (VARCHAR)
+- guanlianyouxi (INT)
+- tianjiaren (VARCHAR)
+- zhongcaoren (VARCHAR)
+- addtime (DATETIME)
+
+9) 表：xiaoxi
+- id (Integer) PK
+- siliaoid (INT)
+- bianhao (VARCHAR)
+- neirong (TEXT)
+- fasongren (VARCHAR)
+- fasongshijian (DATETIME)
+- shifouzhakan (VARCHAR)
+
+10) 表：tongzhi
+- id (Integer) PK
+- tongzhineirong (TEXT)
+- yonghu (VARCHAR)
+- addtime (DATETIME)
+- issh (VARCHAR)
+- isread (INT) -- POJO 使用 @TableField("isread")
+
+11) 表：siliao
+- id (Integer) PK
+- bianhao (VARCHAR)
+- shouxinren (VARCHAR)
+- faxinren (VARCHAR)
+- addtime (DATETIME)
+
+12) 表：sixin
+- id (Integer) PK
+- bijiid (INT)
+- sixinneirong (TEXT)
+- bijibianhao (VARCHAR)
+- bijimingcheng (VARCHAR)
+- tianjiaren (VARCHAR)
+- tupian (VARCHAR)
+- sixinren (VARCHAR)
+- sixinzhuangtai (VARCHAR)
+- addtime (DATETIME)
+- sixinhuifu (TEXT)
+- huifushijian (DATETIME)
+
+13) 表：shoucang
+- id (Integer) PK
+- username (VARCHAR)
+- xwid (INT)
+- biao (VARCHAR)
+- biaoti (VARCHAR)
+- addtime (DATETIME)
+
+14) 表：product_image
+- id (Integer) PK
+- product_id (INT)  -- @TableField("product_id")
+- url (VARCHAR)
+- sort (INT)
+
+15) 表：product_category
+- id (Integer) PK
+- name (VARCHAR)
+- parent_id (INT)  -- @TableField("parent_id")
+- sort (INT)
+- created_at (DATETIME)
+
+16) 表：product
+- id (Integer) PK
+- game_id (INT) -- @TableField("game_id")
+- category_id (INT) -- @TableField("category_id")
+- name (VARCHAR)
+- cover_url (VARCHAR) -- @TableField("cover_url")
+- price (DECIMAL)
+- stock (INT)
+- tags (VARCHAR)
+- intro (TEXT)
+- created_at (DATETIME)
+
+17) 表：pinglunhuifu
+- id (Integer) PK
+- pinglunid (INT)
+- biao (VARCHAR)
+- biaoid (INT)
+- biaoti (VARCHAR)
+- pinglunneirong (TEXT)
+- pinglunren (VARCHAR)
+- huifuneirong (TEXT)
+- huifuren (VARCHAR)
+- addtime (DATETIME)
+
+18) 表：pinglun
+- id (Integer) PK
+- biao (VARCHAR)
+- biaoid (INT)
+- biaoti (VARCHAR)
+- pingfen (INT)
+- pinglunneirong (TEXT)
+- pinglunren (VARCHAR)
+- addtime (DATETIME)
+
+19) 表：orders
+- id (Integer) PK
+- user (VARCHAR)
+- total_amount (DECIMAL) -- @TableField("total_amount")
+- status (VARCHAR)
+- created_at (DATETIME)
+
+五、后端接口清单（摘要：按 Controller）
+- 公共说明：所有接口返回均为 R 包装，分页接口通常接收 body 为 Map 类型，包含 page / pagesize 等。
+
+1) `/api/youxi` (YouxiController)
+- GET  /api/youxi/selectAll
+- POST /api/youxi/selectPages  (body: Map)
+- GET  /api/youxi/findById?id=INT
+- GET  /api/youxi/categories
+- POST /api/youxi/update  (body: Youxi)
+- POST /api/youxi/insert  (body: Youxi)
+- POST /api/youxi/delete  (body: List<Integer>)
+
+2) `/api/topic` (TopicController)
+- POST /api/topic/categories  (body optional)
+- GET  /api/topic/findById?id=INT
+- POST /api/topic/detail (body: {id, page?, pagesize?})
+- POST /api/topic/notes (body: Map)
+- POST /api/topic/discussion/list (body)
+- POST /api/topic/discussion/create (body: {topicId, content, createdBy?})
+
+3) `/api/yonghu` (YonghuController)
+- GET  /api/yonghu/selectAll
+- POST /api/yonghu/selectPages (body)
+- GET  /api/yonghu/findById?id=INT
+- POST /api/yonghu/update (body: Yonghu)
+- POST /api/yonghu/insert (body)
+- POST /api/yonghu/delete (body)
+- POST /api/yonghu/detailWeb (body: {id})  -- 会执行访问数自增
+
+4) `/api/user` (UserController)
+- POST /api/user/login (body: LoginPojo)
+- POST /api/user/editPassword (body: PasswordPojo)
+- GET  /api/user/tokenLogin?token=...
+- POST /api/user/logout
+- POST /api/user/query (body)
+- POST /api/user/select (body)
+
+5) `/api/topic/chat` (TopicChatController)
+- GET  /api/topic/chat/rooms
+- POST /api/topic/chat/rooms/create (body: TopicChatRoom)
+- POST /api/topic/chat/messages/paged (body: {roomId, page, pagesize})
+- GET  /api/topic/chat/messages?roomId=...
+- POST /api/topic/chat/send (body: {roomId, senderId, content})
+
+6) 其它 CRUD 控制器（tongzhi, sixin, siliao, shoucang, pinglun, pinglunhuifu, lunbotu, dianzan, guanzhu）
+- 标准 CRUD：GET /selectAll, POST /selectPages, GET /findById, POST /update, POST /insert, POST /delete
+- 业务特殊接口示例：/api/pinglun/getdianzan, /api/guanzhu/isFollow 等
+
+7) `/api/upload` (UploadController)
+- POST /api/upload/save (multipart: field name = fujian) — 文件上传
+
+8) `/api/order` (OrderController)
+- POST /api/order/createFromCart
+- GET  /api/order/detail?id=...
+- GET  /api/order/list
+
+9) `/api/mall` (MallController)
+- GET  /api/mall/products?gameId=&categoryId=&keyword=&page=&size=
+- GET  /api/mall/products/{id}
+
+六、已发现的关键问题与修复建议（含可复制 SQL / XML）
+
+问题 A：`GameInteractionMapper.xml` 内容为空，导致 MyBatis 在启动时解析失败（SAXParseException: 文件提前结束）。
+- 文件位置：`src/main/resources/mapper/GameInteractionMapper.xml`
+- 修复方案：若不使用，删除该文件；若需要，补全最小有效 XML 模板：
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.spboot.app.mapper.GameInteractionMapper">
+  <!-- 在此处添加 <resultMap> / <select> / <insert> / <update> 等 -->
+</mapper>
+
+问题 B：Unknown column 'guanzhuliang' in 'field list'（来源：BijiMapper 查询）。
+- 原因：Mapper SQL 使用了 `guanzhuliang` 列，但数据库表中缺失。
+- 修复（推荐添加列）：
+
+ALTER TABLE `biji` ADD COLUMN `guanzhuliang` INT(11) NOT NULL DEFAULT 0 COMMENT '浏览量';
+
+问题 C：示例数据关联度不足，建议导入完整示例数据（我可生成 clean SQL）。
+
+七、下一步（请选择）
+- A — 我为你生成完整 clean SQL（CREATE TABLE + INSERT INTO），并把游戏名替换为热门 RPG、笔记标签限定为四类：战力/探索/社交/PK。
+- B — 只生成修复脚本（ALTER TABLE + 最小 mapper XML 模板），并在文档中追加修改清单。
+- C — 我把这个文档再生成一个真正的 `.docx` 文件（如果你需要）。
+
+八、文件位置
+- 我已创建：`d:\项目\yqbj\java\database_and_api.txt`
+
+如需我马上执行 A/B/C 中任意一项或把 TXT 改名为 `.doc`，回复选择即可，我会继续执行并把生成的文件放到项目目录中供你下载。
+

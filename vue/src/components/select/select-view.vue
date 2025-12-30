@@ -15,7 +15,7 @@
             };
         },
         props: {
-            value: [String, Number],
+            value: [String, Number, Array],
             module: {
                 type: String,
                 required: true,
@@ -38,12 +38,39 @@
         methods: {
             getValue() {
                 if (this.value) {
+                    var val = this.value;
+                    if (typeof val == "string") {
+                        if (val.indexOf(",") != -1) {
+                            val = val.split(",");
+                        } else {
+                            val = [val];
+                        }
+                    } else if (typeof val == "number") {
+                        val = [val];
+                    }
+                    
+                    // 尝试转换为数字，以防后端对类型敏感
+                    if (Array.isArray(val)) {
+                        val = val.map(v => {
+                            const n = Number(v);
+                            return isNaN(n) ? v : n;
+                        });
+                    }
+
+                    console.log(`e-select-view querying: module=${this.module}, field=${this.select}, values=`, val);
+
                     DB.name(this.module)
-                        .where(this.select, "in", this.value)
+                        .where(this.select, "in", val)
                         .select()
                         .then((res) => {
-                            var list = res.map((r) => r[this.show]);
-                            this.content = list.join(" ");
+                            console.log(`e-select-view result:`, res);
+                            if (res && Array.isArray(res)) {
+                                var list = res.map((r) => r[this.show]);
+                                this.content = list.join(" ");
+                            }
+                        })
+                        .catch(err => {
+                            console.error("e-select-view error:", err);
                         });
                 } else {
                     this.content = "";

@@ -122,7 +122,7 @@
                                     <el-col v-for="prod in products" :key="prod.id" :xl="6" :lg="8" :md="12" :sm="12" :xs="24">
                                         <el-card class="info-card" shadow="hover" @click="$router.push({ path: '/mall/detail', query: { id: prod.id } })">
                                             <div class="card-thumb">
-                                                <e-img :src="prod.cover_url" class="info-card-cover" />
+                                                <e-img :src="getProductImage(prod)" class="info-card-cover" />
                                                 <div class="card-title-overlay">{{ prod.name }}</div>
                                             </div>
                                             <div class="card-body">
@@ -333,6 +333,32 @@
         };
     };
 
+    const getProductImage = (item) => {
+        // 优先使用非默认命名的图片（假设默认命名包含 product_，而上传的图片是哈希名）
+        const isPreferred = (url) => {
+            if (!url) return false;
+            const s = String(url);
+            return s.indexOf('product_') === -1 && s.indexOf('/upload/') !== -1;
+        };
+
+        // 1. 尝试从 images 数组中找
+        if (item.images && Array.isArray(item.images)) {
+            const found = item.images.find(img => isPreferred(img.url || img));
+            if (found) return found.url || found;
+        }
+
+        // 2. 检查 cover_url
+        if (isPreferred(item.cover_url)) return item.cover_url;
+
+        // 3. 再次尝试 images 数组的第一个
+        if (item.images && Array.isArray(item.images) && item.images.length > 0) {
+            return item.images[0].url || item.images[0];
+        }
+
+        // 4. 兜底
+        return item.cover_url || item.image || item.tupian || item.fengmian || item.img || "";
+    };
+
     const loadDetail = async (id) => {
         if (!id) return;
         const res = await http.get("/api/youxi/findById", { id });
@@ -369,7 +395,43 @@
             // 调用商品列表接口，传入 gameId
             const res = await http.get("/api/mall/products", { gameId, page: 1, size: 4 });
             if (res.code === 0) {
-                products.value = res.data.records || [];
+                let records = res.data.records || [];
+                
+                // 尝试补全图片信息：查询 product_image 表
+                const ids = records.map(r => r.id);
+                if (ids.length > 0) {
+                    try {
+                        // 注意：这里假设 DB 支持 where in 查询
+                        const images = await DB.name("product_image")
+                            .where("product_id", "in", ids)
+                            .select();
+                        
+                        console.log("周边商品IDs:", ids, "获取到的图片:", images);
+
+                        if (images && Array.isArray(images)) {
+                            records.forEach(prod => {
+                                // 找到该产品的所有图片
+                                const prodImages = images.filter(img => img.product_id == prod.id);
+                                if (prodImages.length > 0) {
+                                    // 按 sort 排序
+                                    prodImages.sort((a, b) => (a.sort || 0) - (b.sort || 0));
+                                    
+                                    // 合并到 images 数组
+                                    prod.images = prod.images ? [...prod.images, ...prodImages] : prodImages;
+                                    
+                                    // 如果没有封面，设置第一张图为封面
+                                    if (!prod.cover_url) {
+                                        prod.cover_url = prodImages[0].url;
+                                    }
+                                }
+                            });
+                        }
+                    } catch (err) {
+                        console.error("加载周边图片失败", err);
+                    }
+                }
+
+                products.value = records;
             }
         } catch (e) {
             console.error("加载周边失败", e);

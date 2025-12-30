@@ -23,7 +23,7 @@ public class Admins implements Serializable {
     private String username;
 
     // 密码.
-    @JsonIgnore // 这个字段不返回前端
+    // @JsonIgnore // 这个字段不返回前端
     private String pwd;
 
     public Integer getId() {
